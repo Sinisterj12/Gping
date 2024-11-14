@@ -15,8 +15,11 @@ class PingTool:
         self.ip_entry = tk.Entry(root)
         self.ip_entry.pack(pady=5)
 
-        self.run_button = tk.Button(root, text="Run", command=self.start_ping)
-        self.run_button.pack(pady=5)
+        self.start_button = tk.Button(root, text="Start Test", command=self.start_ping)
+        self.start_button.pack(pady=5)
+
+        self.stop_button = tk.Button(root, text="End Test", command=self.stop_ping, state=tk.DISABLED)
+        self.stop_button.pack(pady=5)
 
         self.status_label = tk.Label(root, text="Status: Unknown", bg="grey")
         self.status_label.pack(pady=5, fill=tk.X)
@@ -32,7 +35,8 @@ class PingTool:
             return
 
         self.is_running = True
-        self.run_button.config(state=tk.DISABLED)
+        self.start_button.config(state=tk.DISABLED)
+        self.stop_button.config(state=tk.NORMAL)
         self.ping_thread = threading.Thread(target=self.ping, args=(ip_address,))
         self.ping_thread.start()
 
@@ -76,7 +80,8 @@ class PingTool:
 
     def stop_ping(self):
         self.is_running = False
-        self.run_button.config(state=tk.NORMAL)
+        self.start_button.config(state=tk.NORMAL)
+        self.stop_button.config(state=tk.DISABLED)
 
 if __name__ == "__main__":
     root = tk.Tk()
