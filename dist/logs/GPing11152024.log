@@ -1,0 +1,61 @@
+
+2024-11-15 14:21:46 - === Network Connection Test Started ===
+==================================================
+2024-11-15 14:21:46 - Testing Gateway IP: 192.168.1.254
+--------------------------------------------------
+2024-11-15 14:21:46 - Testing LAN IP: 192.168.1.183
+--------------------------------------------------
+2024-11-15 14:21:47 - LAN: Response from 192.168.1.183 - time=1ms
+2024-11-15 14:21:47 - GATEWAY: Response from 192.168.1.254 - time=1ms
+
+2024-11-15 14:21:51 - === Network Connection Test Stopped ===
+==================================================
+
+2024-11-15 14:26:27 - === Network Connection Test Started ===
+==================================================
+2024-11-15 14:26:27 - Testing Gateway IP: 192.168.1.254
+--------------------------------------------------
+2024-11-15 14:26:27 - Testing LAN IP: 192.168.1.25
+--------------------------------------------------
+2024-11-15 14:26:27 - GATEWAY: Response from 192.168.1.254 - time=1ms
+2024-11-15 14:26:28 - LAN ALERT: Connection lost to 192.168.1.25
+2024-11-15 14:26:30 - WARNING: LAN connection showing intermittent failures
+2024-11-15 14:26:32 - LAN STATUS: Down for 3s when test stopped
+
+2024-11-15 14:26:32 - === Network Connection Test Stopped ===
+==================================================
+
+2024-11-15 14:26:43 - === Network Connection Test Started ===
+==================================================
+2024-11-15 14:26:43 - Testing Gateway IP: 192.168.1.254
+--------------------------------------------------
+2024-11-15 14:26:43 - Testing LAN IP: 192.168.1.254
+--------------------------------------------------
+2024-11-15 14:26:44 - LAN: Response from 192.168.1.254 - time=1ms
+2024-11-15 14:26:44 - GATEWAY: Response from 192.168.1.254 - time=1ms
+2024-11-15 14:27:01 - GATEWAY ALERT: Connection lost to 192.168.1.254
+2024-11-15 14:27:01 - LAN ALERT: Connection lost to 192.168.1.254
+2024-11-15 14:27:03 - WARNING: GATEWAY connection showing intermittent failures
+2024-11-15 14:27:03 - WARNING: LAN connection showing intermittent failures
+2024-11-15 14:27:13 - LAN: Response from 192.168.1.254 - time=1ms
+2024-11-15 14:27:13 - LAN RESTORED: Connection to 192.168.1.254 after 11s downtime
+2024-11-15 14:27:13 - GATEWAY: Response from 192.168.1.254 - time=1ms
+2024-11-15 14:27:13 - GATEWAY RESTORED: Connection to 192.168.1.254 after 11s downtime
+2024-11-15 14:27:15 - LAN ALERT: Connection lost to 192.168.1.254
+2024-11-15 14:27:16 - LAN: Response from 192.168.1.254 - time=1ms
+2024-11-15 14:27:16 - LAN RESTORED: Connection to 192.168.1.254 after 1s downtime
+
+2024-11-15 14:27:58 - === Network Connection Test Stopped ===
+==================================================
+
+2024-11-15 14:28:01 - === Network Connection Test Started ===
+==================================================
+2024-11-15 14:28:01 - Testing Gateway IP: 192.168.1.254
+--------------------------------------------------
+2024-11-15 14:28:01 - Testing LAN IP: 192.168.1.254
+--------------------------------------------------
+2024-11-15 14:28:01 - GATEWAY: Response from 192.168.1.254 - time=1ms
+2024-11-15 14:28:01 - LAN: Response from 192.168.1.254 - time=1ms
+
+2024-11-15 14:28:08 - === Network Connection Test Stopped ===
+==================================================

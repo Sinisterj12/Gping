@@ -75,16 +75,20 @@ class PingTool:
 
     def check_network_profile(self):
         try:
-            # Run PowerShell command to get network category
+            # Use CREATE_NO_WINDOW flag to hide PowerShell window
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+
             cmd = ["powershell", "-Command", 
                   "Get-NetConnectionProfile | Select-Object -ExpandProperty NetworkCategory"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo)
             profile = result.stdout.strip()
             
             # Get network adapter info
             cmd_adapter = ["powershell", "-Command", 
                          "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -First 1 | Select-Object -ExpandProperty Name"]
-            adapter_result = subprocess.run(cmd_adapter, capture_output=True, text=True)
+            adapter_result = subprocess.run(cmd_adapter, capture_output=True, text=True, startupinfo=startupinfo)
             adapter_name = adapter_result.stdout.strip()
             
             if profile == "DomainAuthenticated":
@@ -157,10 +161,15 @@ class PingTool:
 
     def detect_ip_addresses(self):
         try:
+            # Use CREATE_NO_WINDOW flag to hide PowerShell window
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+
             # Get default gateway
             cmd = ["powershell", "-Command", 
                   "(Get-NetRoute -DestinationPrefix '0.0.0.0/0' | Select-Object -First 1).NextHop"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo)
             gateway = result.stdout.strip()
             if gateway:
                 self.gateway_ip_entry.delete(0, tk.END)
@@ -373,6 +382,11 @@ class PingTool:
         last_success_log = 0
         ping_interval = 1.0  # Base interval between pings
         
+        # Create startupinfo once for all ping commands
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        
         while self.is_running:
             loop_start = time.time()
             try:
@@ -380,7 +394,8 @@ class PingTool:
                     ["ping", "-n", "1", "-w", "500", ip_address],  # Reduced timeout to 500ms
                     capture_output=True,
                     text=True,
-                    timeout=1  # Reduced overall timeout to 1 second
+                    timeout=1,  # Reduced overall timeout to 1 second
+                    startupinfo=startupinfo  # Add startupinfo here
                 )
                 
                 current_time = time.time()
