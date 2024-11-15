@@ -10,6 +10,7 @@ import psutil
 import socket
 import re
 from datetime import datetime, timedelta
+import csv
 
 class PingTool:
     def __init__(self, root):
@@ -43,10 +44,11 @@ class PingTool:
         self.create_results_frame()
         
         self.is_running = False
-        self.gateway_down_start = None
-        self.lan_down_start = None
-        self.last_gateway_status = None
-        self.last_lan_status = None
+        self.last_csv_log_time = 0
+        self.csv_log_interval = 300  # Log successful pings every 5 minutes
+        self.failure_logged = {}  # Track failures per IP address
+        self.ip_status = {}  # Track status per IP address
+        self.down_start_times = {}  # Track down start times per IP
         
         # Bind window close event
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -55,7 +57,11 @@ class PingTool:
         self.logs_dir = "logs"
         if not os.path.exists(self.logs_dir):
             os.makedirs(self.logs_dir)
-
+            
+        # Initialize CSV logging
+        self.csv_filename = f"GPing{datetime.now().strftime('%m%d%Y')}.csv"
+        self.init_csv_log()
+        
     def create_network_frame(self):
         self.network_frame = ctk.CTkFrame(self.main_frame)
         self.network_frame.pack(fill="x", padx=5, pady=5)
@@ -244,6 +250,38 @@ class PingTool:
         except Exception as e:
             print(f"Error writing to log: {e}")
 
+    def init_csv_log(self):
+        """Initialize CSV log file if it doesn't exist"""
+        if not os.path.exists(self.csv_filename):
+            with open(self.csv_filename, 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow([
+                    'Timestamp',
+                    'Event Type',
+                    'IP Address',
+                    'Status',
+                    'Response Time (ms)',
+                    'Network Type',
+                    'Details'
+                ])
+
+    def log_to_csv(self, event_type, ip_address, status, response_time=None, network_type=None, details=None):
+        """Log events to CSV file"""
+        try:
+            with open(self.csv_filename, 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow([
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    event_type,
+                    ip_address,
+                    status,
+                    response_time if response_time is not None else '',
+                    network_type if network_type is not None else '',
+                    details if details is not None else ''
+                ])
+        except Exception as e:
+            print(f"Error writing to CSV: {str(e)}")
+
     def extract_ping_time(self, ping_output):
         """Extract ping time from ping command output"""
         try:
@@ -329,10 +367,7 @@ class PingTool:
             self.log_event(f"Testing LAN IP: {lan_ip_address}")
         
         # Reset status tracking
-        self.last_gateway_status = None
-        self.last_lan_status = None
-        self.gateway_down_start = None
-        self.lan_down_start = None
+        self.last_csv_log_time = 0
         
         # Update status to starting (yellow)
         self.update_status_indicator("starting", "gateway")
@@ -358,12 +393,10 @@ class PingTool:
             
             # Log final status if there were ongoing issues
             current_time = time.time()
-            if self.gateway_down_start:
-                downtime = self.format_duration(int(current_time - self.gateway_down_start))
-                self.log_event(f"GATEWAY STATUS: Down for {downtime} when test stopped")
-            if self.lan_down_start:
-                downtime = self.format_duration(int(current_time - self.lan_down_start))
-                self.log_event(f"LAN STATUS: Down for {downtime} when test stopped")
+            for ip_address in self.down_start_times:
+                if self.down_start_times[ip_address]:
+                    downtime = self.format_duration(int(current_time - self.down_start_times[ip_address]))
+                    self.log_event(f"{ip_address.upper()} STATUS: Down for {downtime} when test stopped")
             
             self.log_event("=== Network Connection Test Stopped ===")
             
@@ -378,9 +411,16 @@ class PingTool:
                 self.lan_ping_thread = None
 
     def ping(self, ip_address, ping_type):
+        # Initialize status tracking for this IP if not exists
+        if ip_address not in self.failure_logged:
+            self.failure_logged[ip_address] = False
+            self.ip_status[ip_address] = True  # Assume up initially
+            self.down_start_times[ip_address] = None
+
         consecutive_failures = 0
         last_success_log = 0
-        ping_interval = 1.0  # Base interval between pings
+        ping_interval = 1.0
+        first_ping = True  # Track if this is the first ping
         
         # Create startupinfo once for all ping commands
         startupinfo = subprocess.STARTUPINFO()
@@ -391,11 +431,11 @@ class PingTool:
             loop_start = time.time()
             try:
                 ping_process = subprocess.run(
-                    ["ping", "-n", "1", "-w", "500", ip_address],  # Reduced timeout to 500ms
+                    ["ping", "-n", "1", "-w", "500", ip_address],
                     capture_output=True,
                     text=True,
-                    timeout=1,  # Reduced overall timeout to 1 second
-                    startupinfo=startupinfo  # Add startupinfo here
+                    timeout=1,
+                    startupinfo=startupinfo
                 )
                 
                 current_time = time.time()
@@ -404,70 +444,115 @@ class PingTool:
                 
                 if is_up:
                     consecutive_failures = 0
-                    # Log successful pings every 5 minutes or after a failure
-                    if current_time - last_success_log >= 300 or (
-                        (ping_type == "gateway" and self.last_gateway_status == False) or 
-                        (ping_type == "lan" and self.last_lan_status == False)
-                    ):
+                    self.failure_logged[ip_address] = False  # Reset failure logging flag for this IP
+                    
+                    # Check if we're recovering from a down state
+                    if not self.ip_status[ip_address]:
+                        if self.down_start_times[ip_address]:
+                            downtime = max(1, int(current_time - self.down_start_times[ip_address]))
+                            self.log_event(f"{ping_type.upper()}: Connection restored to {ip_address} after {self.format_duration(downtime)} downtime - time={ping_time}ms")
+                            self.down_start_times[ip_address] = None
+                    # Always log the first successful ping
+                    elif first_ping or current_time - last_success_log >= 300:
                         self.log_event(f"{ping_type.upper()}: Response from {ip_address} - time={ping_time}ms")
-                        last_success_log = current_time
+                    
+                    first_ping = False
+                        
+                    # Only log to CSV on status change or interval
+                    if current_time - self.last_csv_log_time >= self.csv_log_interval or not self.ip_status[ip_address]:
+                        if not self.ip_status[ip_address]:  # If recovering from down state
+                            if self.down_start_times[ip_address]:
+                                downtime = max(1, int(current_time - self.down_start_times[ip_address]))
+                                self.log_to_csv(
+                                    ping_type.upper(),
+                                    ip_address,
+                                    "RESTORED",
+                                    ping_time,
+                                    self.get_network_type(),
+                                    f"Downtime: {self.format_duration(downtime)}"
+                                )
+                                self.down_start_times[ip_address] = None
+                        else:  # Regular interval update
+                            self.log_to_csv(
+                                ping_type.upper(),
+                                ip_address,
+                                "UP",
+                                ping_time,
+                                self.get_network_type(),
+                                f"Response time: {ping_time}ms"
+                            )
+                        self.last_csv_log_time = current_time
+                    last_success_log = current_time
+                    self.ip_status[ip_address] = True
                 else:
                     consecutive_failures += 1
+                    if first_ping:
+                        self.log_event(f"{ping_type.upper()}: No response from {ip_address}")
+                        first_ping = False
+                        
+                    if self.ip_status[ip_address] and consecutive_failures >= 3:  # Just went down
+                        self.ip_status[ip_address] = False
+                        self.down_start_times[ip_address] = current_time
+                        self.log_event(f"{ping_type.upper()} ALERT: Connection lost to {ip_address}")
+                        self.log_to_csv(
+                            ping_type.upper(),
+                            ip_address,
+                            "ALERT",
+                            None,
+                            self.get_network_type(),
+                            "Connection lost"
+                        )
+                    # Only log the initial failure after 3 attempts
+                    elif consecutive_failures >= 3 and not self.failure_logged[ip_address]:
+                        self.log_to_csv(
+                            ping_type.upper(),
+                            ip_address,
+                            "DOWN",
+                            None,
+                            self.get_network_type(),
+                            f"No response after {consecutive_failures} attempts"
+                        )
+                        self.failure_logged[ip_address] = True  # Set flag for this IP
                 
+                # Update UI status
                 if ping_type == "gateway":
-                    if is_up != self.last_gateway_status:
-                        if is_up:
-                            if self.gateway_down_start:
-                                downtime = max(1, int(current_time - self.gateway_down_start))  # Minimum 1 second
-                                self.log_event(f"GATEWAY RESTORED: Connection to {ip_address} after {self.format_duration(downtime)} downtime")
-                                self.gateway_down_start = None
-                        else:
-                            self.gateway_down_start = current_time
-                            self.log_event(f"GATEWAY ALERT: Connection lost to {ip_address}")
-                        self.last_gateway_status = is_up
+                    self.last_gateway_status = is_up
                 else:  # LAN
-                    if is_up != self.last_lan_status:
-                        if is_up:
-                            if self.lan_down_start:
-                                downtime = max(1, int(current_time - self.lan_down_start))  # Minimum 1 second
-                                self.log_event(f"LAN RESTORED: Connection to {ip_address} after {self.format_duration(downtime)} downtime")
-                                self.lan_down_start = None
-                        else:
-                            self.lan_down_start = current_time
-                            self.log_event(f"LAN ALERT: Connection lost to {ip_address}")
-                        self.last_lan_status = is_up
-                
-                # Log warning if multiple consecutive failures
-                if consecutive_failures == 3:
-                    self.log_event(f"WARNING: {ping_type.upper()} connection showing intermittent failures")
+                    self.last_lan_status = is_up
                 
                 # Update status indicator
                 self.root.after(0, lambda: self.update_status_indicator(
                     "up" if is_up else "down", ping_type))
-                
+
+                # Sleep for remaining time to maintain 1 second interval
+                elapsed = time.time() - loop_start
+                if elapsed < ping_interval:
+                    time.sleep(ping_interval - elapsed)
+                    
             except subprocess.TimeoutExpired:
-                consecutive_failures += 1
-                current_time = time.time()
+                if first_ping:
+                    self.log_event(f"{ping_type.upper()}: Connection timeout to {ip_address}")
+                    first_ping = False
                 
-                if ping_type == "gateway" and self.last_gateway_status != False:
-                    self.gateway_down_start = current_time
-                    self.log_event(f"GATEWAY CRITICAL: Connection timeout to {ip_address}")
+                if not self.failure_logged[ip_address]:
+                    self.log_to_csv(
+                        ping_type.upper(),
+                        ip_address,
+                        "DOWN",
+                        None,
+                        self.get_network_type(),
+                        "Ping timeout"
+                    )
+                    self.failure_logged[ip_address] = True
+                
+                # Update UI status
+                if ping_type == "gateway":
                     self.last_gateway_status = False
-                elif ping_type == "lan" and self.last_lan_status != False:
-                    self.lan_down_start = current_time
-                    self.log_event(f"LAN CRITICAL: Connection timeout to {ip_address}")
+                else:  # LAN
                     self.last_lan_status = False
                 
+                # Update status indicator
                 self.root.after(0, lambda: self.update_status_indicator("down", ping_type))
-            
-            except Exception as e:
-                self.log_event(f"ERROR: {ping_type.upper()} test failed - {str(e)}")
-                self.root.after(0, lambda: self.update_status_indicator("down", ping_type))
-            
-            # Calculate sleep time to maintain consistent intervals
-            elapsed = time.time() - loop_start
-            sleep_time = max(0, ping_interval - elapsed)
-            time.sleep(sleep_time)
 
     def load_settings(self):
         self.saved_settings = {}
@@ -477,6 +562,21 @@ class PingTool:
                     self.saved_settings = json.load(f)
         except Exception as e:
             print(f"Error loading settings: {e}")
+
+    def get_network_type(self):
+        try:
+            # Use CREATE_NO_WINDOW flag to hide PowerShell window
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+
+            cmd = ["powershell", "-Command", 
+                  "Get-NetConnectionProfile | Select-Object -ExpandProperty NetworkCategory"]
+            result = subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo)
+            profile = result.stdout.strip()
+            return profile
+        except Exception as e:
+            return "Unknown"
 
     def on_closing(self):
         if self.is_running:

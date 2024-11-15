@@ -1,0 +1,148 @@
+Timestamp,Event Type,IP Address,Status,Response Time (ms),Network Type,Details
+2024-11-15 14:43:48,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 14:43:48,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:43:49,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:43:50,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:43:51,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:43:52,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:43:53,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:43:54,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:43:55,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:43:56,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:43:57,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:44,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 14:45:44,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:45,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:45:46,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:47,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:48,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:49,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:50,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:51,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:52,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:53,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:54,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:55,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:56,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:45:57,LAN,192.168.1.25,DOWN,,Public,No response
+2024-11-15 14:48:12,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 14:48:12,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:48:14,LAN,192.168.1.25,DOWN,,Public,No response after 3 attempts
+2024-11-15 14:48:15,LAN,192.168.1.25,DOWN,,Public,No response after 4 attempts
+2024-11-15 14:48:16,LAN,192.168.1.25,DOWN,,Public,No response after 5 attempts
+2024-11-15 14:48:17,LAN,192.168.1.25,DOWN,,Public,No response after 6 attempts
+2024-11-15 14:48:19,LAN,192.168.1.25,DOWN,,Public,No response after 7 attempts
+2024-11-15 14:48:19,LAN,192.168.1.25,DOWN,,Public,No response after 8 attempts
+2024-11-15 14:48:20,LAN,192.168.1.25,DOWN,,Public,No response after 9 attempts
+2024-11-15 14:48:21,LAN,192.168.1.25,DOWN,,Public,No response after 10 attempts
+2024-11-15 14:48:22,LAN,192.168.1.25,DOWN,,Public,No response after 11 attempts
+2024-11-15 14:48:23,LAN,192.168.1.25,DOWN,,Public,No response after 12 attempts
+2024-11-15 14:48:24,LAN,192.168.1.25,DOWN,,Public,No response after 13 attempts
+2024-11-15 14:48:26,LAN,192.168.1.25,DOWN,,Public,No response after 14 attempts
+2024-11-15 14:49:01,GATEWAY,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:49:01,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:49:03,LAN,192.168.1.25,DOWN,,Public,No response after 3 attempts
+2024-11-15 14:49:03,GATEWAY,192.168.1.25,DOWN,,Public,No response after 3 attempts
+2024-11-15 14:49:05,GATEWAY,192.168.1.25,DOWN,,Public,No response after 4 attempts
+2024-11-15 14:49:05,LAN,192.168.1.25,DOWN,,Public,No response after 4 attempts
+2024-11-15 14:49:07,GATEWAY,192.168.1.25,DOWN,,Public,No response after 5 attempts
+2024-11-15 14:49:07,LAN,192.168.1.25,DOWN,,Public,No response after 5 attempts
+2024-11-15 14:49:08,LAN,192.168.1.25,DOWN,,Public,No response after 6 attempts
+2024-11-15 14:49:08,GATEWAY,192.168.1.25,DOWN,,Public,No response after 6 attempts
+2024-11-15 14:50:43,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 14:50:43,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:50:45,LAN,192.168.1.25,DOWN,,Public,No response after 3 attempts
+2024-11-15 14:50:47,LAN,192.168.1.25,DOWN,,Public,No response after 5 attempts
+2024-11-15 14:50:49,LAN,192.168.1.25,DOWN,,Public,No response after 7 attempts
+2024-11-15 14:50:51,LAN,192.168.1.25,DOWN,,Public,No response after 8 attempts
+2024-11-15 14:50:53,LAN,192.168.1.25,DOWN,,Public,No response after 10 attempts
+2024-11-15 14:50:55,LAN,192.168.1.25,DOWN,,Public,No response after 12 attempts
+2024-11-15 14:50:58,LAN,192.168.1.25,DOWN,,Public,No response after 14 attempts
+2024-11-15 14:50:59,LAN,192.168.1.25,DOWN,,Public,No response after 16 attempts
+2024-11-15 14:51:05,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:51:05,GATEWAY,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:51:29,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:51:31,LAN,192.168.1.25,DOWN,,Public,No response after 3 attempts
+2024-11-15 14:51:34,LAN,192.168.1.25,DOWN,,Public,No response after 5 attempts
+2024-11-15 14:51:36,LAN,192.168.1.25,DOWN,,Public,No response after 7 attempts
+2024-11-15 14:51:38,LAN,192.168.1.25,DOWN,,Public,No response after 9 attempts
+2024-11-15 14:51:41,LAN,192.168.1.25,DOWN,,Public,No response after 11 attempts
+2024-11-15 14:51:43,LAN,192.168.1.25,DOWN,,Public,No response after 13 attempts
+2024-11-15 14:51:46,LAN,192.168.1.25,DOWN,,Public,No response after 15 attempts
+2024-11-15 14:51:48,LAN,192.168.1.25,DOWN,,Public,No response after 17 attempts
+2024-11-15 14:51:50,LAN,192.168.1.25,DOWN,,Public,No response after 18 attempts
+2024-11-15 14:51:52,LAN,192.168.1.25,DOWN,,Public,No response after 20 attempts
+2024-11-15 14:51:54,LAN,192.168.1.25,DOWN,,Public,No response after 22 attempts
+2024-11-15 14:53:24,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:53:25,GATEWAY,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:53:26,LAN,192.168.1.25,DOWN,,Public,No response after 3 attempts
+2024-11-15 14:53:27,GATEWAY,192.168.1.25,DOWN,,Public,No response after 3 attempts
+2024-11-15 14:53:51,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 14:53:51,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:54:24,GATEWAY,192.168.1.254,ALERT,,,Connection lost
+2024-11-15 14:54:24,LAN,192.168.1.254,ALERT,,,Connection lost
+2024-11-15 14:54:26,LAN,192.168.1.254,DOWN,,,No response after 3 attempts
+2024-11-15 14:54:26,GATEWAY,192.168.1.254,DOWN,,,No response after 3 attempts
+2024-11-15 14:54:36,LAN,192.168.1.254,RESTORED,1,Public,Downtime: 12s
+2024-11-15 14:54:36,GATEWAY,192.168.1.254,RESTORED,1,Public,Downtime: 12s
+2024-11-15 14:55:09,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:55:09,LAN,192.168.1.254,RESTORED,1,Public,Downtime: 1s
+2024-11-15 14:55:11,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:55:12,LAN,192.168.1.25,DOWN,,Public,No response after 3 attempts
+2024-11-15 14:55:12,LAN,192.168.1.254,RESTORED,1,Public,Downtime: 1s
+2024-11-15 14:55:13,LAN,192.168.1.25,DOWN,,Public,No response after 4 attempts
+2024-11-15 14:55:15,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:55:16,LAN,192.168.1.25,DOWN,,Public,No response after 5 attempts
+2024-11-15 14:55:16,LAN,192.168.1.254,RESTORED,1,Public,Downtime: 2s
+2024-11-15 14:55:17,LAN,192.168.1.25,DOWN,,Public,No response after 6 attempts
+2024-11-15 14:55:18,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:55:19,LAN,192.168.1.25,DOWN,,Public,No response after 7 attempts
+2024-11-15 14:55:19,LAN,192.168.1.254,RESTORED,1,Public,Downtime: 1s
+2024-11-15 14:55:21,LAN,192.168.1.25,DOWN,,Public,No response after 9 attempts
+2024-11-15 14:55:21,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:55:24,LAN,192.168.1.25,DOWN,,Public,No response after 10 attempts
+2024-11-15 14:55:24,LAN,192.168.1.254,RESTORED,1,Public,Downtime: 1s
+2024-11-15 14:57:31,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 14:57:31,LAN,192.168.1.254,UP,3,Public,Response time: 3ms
+2024-11-15 14:57:39,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 14:57:39,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 14:57:56,GATEWAY,192.168.1.254,DOWN,,,No response after 3 attempts
+2024-11-15 14:57:56,LAN,192.168.1.254,ALERT,,,Connection lost
+2024-11-15 14:58:06,LAN,192.168.1.254,RESTORED,1,Public,Downtime: 10s
+2024-11-15 14:58:06,GATEWAY,192.168.1.254,RESTORED,1,Public,Downtime: 10s
+2024-11-15 14:58:19,GATEWAY,192.168.1.254,UP,2,Public,Response time: 2ms
+2024-11-15 14:58:21,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 14:58:23,LAN,192.168.1.25,DOWN,,Public,No response after 4 attempts
+2024-11-15 14:59:21,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 14:59:38,LAN,192.168.1.254,UP,4,Public,Response time: 4ms
+2024-11-15 15:00:33,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:00:35,GATEWAY,192.168.1.2,ALERT,,Public,Connection lost
+2024-11-15 15:00:36,GATEWAY,192.168.1.2,DOWN,,Public,No response after 4 attempts
+2024-11-15 15:00:48,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:00:48,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:00:56,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:01:16,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:02:59,GATEWAY,192.168.1.254,DOWN,,Public,Ping timeout
+2024-11-15 15:03:39,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:03:41,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 15:03:42,LAN,192.168.1.25,DOWN,,Public,No response after 4 attempts
+2024-11-15 15:04:10,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:04:10,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:04:58,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:04:58,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:05:09,GATEWAY,192.168.1.254,ALERT,,,Connection lost
+2024-11-15 15:05:09,LAN,192.168.1.254,DOWN,,,No response after 3 attempts
+2024-11-15 15:05:15,LAN,192.168.1.254,RESTORED,1,Public,Downtime: 5s
+2024-11-15 15:05:15,GATEWAY,192.168.1.254,RESTORED,1,Public,Downtime: 5s
+2024-11-15 15:06:29,GATEWAY,192.168.1.254,DOWN,,Public,Ping timeout
+2024-11-15 15:06:38,LAN,192.168.1.254,DOWN,,Public,Ping timeout
+2024-11-15 15:06:38,GATEWAY,192.168.1.254,DOWN,,Public,Ping timeout
+2024-11-15 15:07:09,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:07:10,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:07:17,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:07:19,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 15:07:21,LAN,192.168.1.25,DOWN,,Public,No response after 4 attempts
+2024-11-15 15:07:32,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:07:32,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 15:07:41,GATEWAY,192.168.1.254,DOWN,,,No response after 3 attempts
+2024-11-15 15:07:41,LAN,192.168.1.254,ALERT,,,Connection lost
