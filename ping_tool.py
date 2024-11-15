@@ -49,17 +49,17 @@ class PingTool:
         self.failure_logged = {}  # Track failures per IP address
         self.ip_status = {}  # Track status per IP address
         self.down_start_times = {}  # Track down start times per IP
+        self.total_downtime = {}  # Track total downtime per IP
         
         # Bind window close event
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         
         # Initialize logging variables
-        self.logs_dir = "logs"
+        self.current_date = datetime.now().strftime('%m%d%Y')
+        self.csv_filename = f"GPing{self.current_date}.csv"
+        self.logs_dir = "logs"  # Add this back
         if not os.path.exists(self.logs_dir):
             os.makedirs(self.logs_dir)
-            
-        # Initialize CSV logging
-        self.csv_filename = f"GPing{datetime.now().strftime('%m%d%Y')}.csv"
         self.init_csv_log()
         
     def create_network_frame(self):
@@ -240,7 +240,9 @@ class PingTool:
                 # Regular entries
                 log_entry = f"{timestamp} - {message}"
             
-            with open(self.get_log_filename(), "a") as log_file:
+            # Write to the current day's log file
+            log_path = os.path.join(self.logs_dir, f"GPing{self.current_date}.log")
+            with open(log_path, "a") as log_file:
                 log_file.write(log_entry + "\n")
             
             # Update results text widget with new log entry
@@ -416,7 +418,8 @@ class PingTool:
             self.failure_logged[ip_address] = False
             self.ip_status[ip_address] = True  # Assume up initially
             self.down_start_times[ip_address] = None
-
+            self.total_downtime[ip_address] = 0
+            
         consecutive_failures = 0
         last_success_log = 0
         ping_interval = 1.0
@@ -428,6 +431,13 @@ class PingTool:
         startupinfo.wShowWindow = subprocess.SW_HIDE
         
         while self.is_running:
+            # Check if date has changed and update log file if needed
+            current_date = datetime.now().strftime('%m%d%Y')
+            if current_date != self.current_date:
+                self.current_date = current_date
+                self.csv_filename = f"GPing{self.current_date}.csv"
+                self.init_csv_log()
+            
             loop_start = time.time()
             try:
                 ping_process = subprocess.run(
@@ -450,7 +460,16 @@ class PingTool:
                     if not self.ip_status[ip_address]:
                         if self.down_start_times[ip_address]:
                             downtime = max(1, int(current_time - self.down_start_times[ip_address]))
-                            self.log_event(f"{ping_type.upper()}: Connection restored to {ip_address} after {self.format_duration(downtime)} downtime - time={ping_time}ms")
+                            self.total_downtime[ip_address] += downtime
+                            self.log_event(f"{ping_type.upper()}: Connection restored to {ip_address} after {self.format_duration(downtime)} downtime (Total downtime: {self.format_duration(self.total_downtime[ip_address])}) - time={ping_time}ms")
+                            self.log_to_csv(
+                                ping_type.upper(),
+                                ip_address,
+                                "RESTORED",
+                                ping_time,
+                                self.get_network_type(),
+                                f"Downtime: {self.format_duration(downtime)} (Total: {self.format_duration(self.total_downtime[ip_address])})"
+                            )
                             self.down_start_times[ip_address] = None
                     # Always log the first successful ping
                     elif first_ping or current_time - last_success_log >= 300:

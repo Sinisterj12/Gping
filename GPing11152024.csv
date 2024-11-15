@@ -146,3 +146,20 @@ Timestamp,Event Type,IP Address,Status,Response Time (ms),Network Type,Details
 2024-11-15 15:07:32,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
 2024-11-15 15:07:41,GATEWAY,192.168.1.254,DOWN,,,No response after 3 attempts
 2024-11-15 15:07:41,LAN,192.168.1.254,ALERT,,,Connection lost
+2024-11-15 16:22:48,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 16:22:48,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 16:24:42,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 16:24:42,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 16:33:10,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 16:33:10,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 16:34:59,LAN,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 16:34:59,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 16:35:09,GATEWAY,192.168.1.254,DOWN,,,No response after 3 attempts
+2024-11-15 16:35:09,LAN,192.168.1.254,ALERT,,,Connection lost
+2024-11-15 16:35:13,GATEWAY,192.168.1.254,RESTORED,1,Public,Downtime: 3s (Total: 6s)
+2024-11-15 16:35:13,LAN,192.168.1.254,RESTORED,1,Public,Downtime: 3s (Total: 6s)
+2024-11-15 16:36:03,GATEWAY,192.168.1.254,DOWN,,Public,Ping timeout
+2024-11-15 16:36:03,LAN,192.168.1.254,DOWN,,Public,Ping timeout
+2024-11-15 16:36:11,GATEWAY,192.168.1.254,UP,1,Public,Response time: 1ms
+2024-11-15 16:36:13,LAN,192.168.1.25,ALERT,,Public,Connection lost
+2024-11-15 16:36:14,LAN,192.168.1.25,DOWN,,Public,No response after 4 attempts
