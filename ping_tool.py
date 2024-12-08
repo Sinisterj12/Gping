@@ -156,7 +156,16 @@ class PingTool:
         ctk.set_appearance_mode("system")
         ctk.set_default_color_theme("blue")
         
-        self.settings_file = "gping_settings.json"
+        # Get base path for executable or script
+        if getattr(sys, 'frozen', False):
+            self.base_path = os.path.dirname(sys.executable)
+        else:
+            self.base_path = os.path.dirname(os.path.abspath(__file__))
+            
+        # Set file paths
+        self.settings_file = os.path.join(self.base_path, "gping_settings.json")
+        self.logs_dir = os.path.join(self.base_path, "logs")
+        
         self.load_settings()
         
         # Initialize tracking variables
@@ -190,7 +199,6 @@ class PingTool:
         self.total_downtime = {}
         
         # Create logs directory and cleanup old logs
-        self.logs_dir = "logs"
         if not os.path.exists(self.logs_dir):
             os.makedirs(self.logs_dir)
         self.cleanup_old_logs()
@@ -285,8 +293,8 @@ class PingTool:
             
             self._csv_buffer.append(row)
             
-            # Flush buffer if it's large enough or enough time has passed
-            if len(self._csv_buffer) >= 10 or time.time() - self._last_flush > 5:
+            # Force flush on RESTORED events or if buffer is large enough or enough time has passed
+            if status == "RESTORED" or len(self._csv_buffer) >= 10 or time.time() - self._last_flush > 5:
                 with open(self.csv_filename, 'a', newline='') as csvfile:
                     writer = csv.writer(csvfile)
                     writer.writerows(self._csv_buffer)
