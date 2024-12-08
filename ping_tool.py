@@ -1,27 +1,65 @@
-import tkinter as tk
-import customtkinter as ctk
-from tkinter import messagebox
-import subprocess
-import threading
-import time
-import json
-import os
-import psutil
-import socket
-import re
-from datetime import datetime, timedelta
-import csv
+#################################################################
+# GPING TOOL - Network Connectivity Monitor
+# 
+# This tool monitors network connectivity using TCP pings to both
+# gateway and LAN addresses. It provides real-time status updates
+# and logs connection events for troubleshooting.
+#
+# Structure:
+# 1. TCPingHandler: Core ping functionality (DO NOT MODIFY)
+# 2. PingTool: GUI and monitoring implementation
+#    - Network checking (expandable for future features)
+#    - IP configuration
+#    - Status monitoring and logging
+#
+# Future Additions Planned:
+# - Additional network checks under network profile section
+# - Enhanced ping functionality (coming soon)
+# - More GUI features for better monitoring
+#################################################################
 
 #################################################################
 # CORE FUNCTIONALITY - MODIFY ONLY WHEN CHANGING PING BEHAVIOR
 #################################################################
 
+import subprocess
+import threading
+import time
+import csv
+import os
+import json
+from datetime import datetime, timedelta
+import tkinter as tk
+import customtkinter as ctk
+from tkinter import messagebox
+import re
+import socket
+import ctypes
+import sys
+
 class TCPingHandler:
-    """TCPing implementation for network connectivity testing"""
-    def __init__(self, tcping_path="tcping.exe"):
-        self.tcping_path = tcping_path
+    """TCPing implementation for network connectivity testing
+    
+    This class handles the core ping functionality using tcping.exe.
+    It's designed to be simple and reliable for network testing.
+    
+    Note: Any changes here will affect ALL ping behavior in the application"""
+    def __init__(self, tcping_path=None):
+        if tcping_path is None:
+            # Get the directory where the executable is located
+            if getattr(sys, 'frozen', False):
+                # Running as compiled executable
+                base_path = os.path.dirname(sys.executable)
+            else:
+                # Running as script
+                base_path = os.path.dirname(os.path.abspath(__file__))
+            
+            self.tcping_path = os.path.join(base_path, "tcping.exe")
+        else:
+            self.tcping_path = tcping_path
+            
         if not os.path.exists(self.tcping_path):
-            raise FileNotFoundError(f"Error: {self.tcping_path} not found in the application directory")
+            raise FileNotFoundError(f"Error: tcping.exe not found at {self.tcping_path}")
         
     def ping_address(self, ip_address, ping_type=None):
         """Execute a TCP ping and return (is_successful, ping_time_ms)"""
@@ -61,11 +99,32 @@ class TCPingHandler:
             return False, None
 
 #################################################################
+# END OF CORE PING HANDLER - DO NOT MODIFY WITHOUT DISCUSSION
+#################################################################
+
+#################################################################
 # GUI IMPLEMENTATION - DO NOT MODIFY UNLESS EXPLICITLY REQUESTED
-# These sections handle the graphical interface and should remain intact
+# 
+# The GUI is built using customtkinter for a modern look.
+# Each section (frames) handles different aspects:
+# - Network Frame: Shows network profile (more features coming)
+# - IP Frame: Configure gateway and LAN IPs
+# - Control Frame: Start/Stop buttons
+# - Results Frame: Real-time log display
 #################################################################
 
 class PingTool:
+    """Main application class handling GUI and ping monitoring
+    
+    This class ties everything together:
+    1. Creates and manages the GUI
+    2. Handles network profile checking (expandable section)
+    3. Manages ping tests and logging
+    4. Tracks connection status and packet loss
+    
+    Note: Most modifications should focus on adding features,
+    not changing existing core functionality
+    """
     def __init__(self, root):
         self.root = root
         self.root.title("GPing by James")
@@ -133,18 +192,26 @@ class PingTool:
 
     def init_csv_log(self):
         """Initialize CSV log file if it doesn't exist"""
-        if not os.path.exists(self.csv_filename):
-            with open(self.csv_filename, 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow([
-                    'Timestamp',
-                    'Event Type',
-                    'IP Address',
-                    'Status',
-                    'Response Time',
-                    'Network Type',
-                    'Packet Loss %'
-                ])
+        try:
+            if not os.path.exists(self.logs_dir):
+                os.makedirs(self.logs_dir)
+                
+            if not os.path.exists(self.csv_filename):
+                with open(self.csv_filename, 'w', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow([
+                        'Timestamp',
+                        'Event Type',
+                        'IP Address',
+                        'Status',
+                        'Response Time',
+                        'Network Type',
+                        'Packet Loss %'
+                    ])
+        except PermissionError:
+            messagebox.showerror("Error", "Cannot create log file. Please run as administrator or check folder permissions.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to initialize log file: {str(e)}")
 
     def calculate_packet_loss(self, ip_address):
         """Calculate packet loss percentage for an IP"""
@@ -157,11 +224,15 @@ class PingTool:
             
         return round((self.failed_pings[ip_address] / self.total_pings[ip_address]) * 100, 1)
 
-    def log_to_csv(self, event_type, ip_address, status, response_time=None, network_type=None, details=None):
+    def log_to_csv(self, event_type, ip_address, status, response_time=None, network_type=None, details=None, skip_packet_loss=False):
         """Log events to CSV file"""
         try:
+            # Ensure logs directory exists
+            if not os.path.exists(self.logs_dir):
+                os.makedirs(self.logs_dir)
+                
             response_time_str = f"{response_time:.3f}ms" if response_time is not None else ''
-            packet_loss = f"{self.calculate_packet_loss(ip_address)}%"
+            packet_loss = f"{self.calculate_packet_loss(ip_address)}%" if not skip_packet_loss else ''
             
             with open(self.csv_filename, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile)
@@ -174,92 +245,10 @@ class PingTool:
                     network_type if network_type is not None else '',  # Network Type
                     packet_loss                                    # Packet Loss %
                 ])
+        except PermissionError:
+            self.log_event("ERROR: Cannot write to log file. Please check permissions.")
         except Exception as e:
-            print(f"Error writing to CSV: {str(e)}")
-
-    def ping(self, ip_address, ping_type):
-        """Execute ping tests for a given IP address"""
-        # Initialize tracking for this IP if not exists
-        if ip_address not in self.total_pings:
-            self.total_pings[ip_address] = 0
-            self.failed_pings[ip_address] = 0
-        
-        if ip_address not in self.failure_logged:
-            self.failure_logged[ip_address] = False
-            self.ip_status[ip_address] = True
-            self.down_start_times[ip_address] = None
-            
-        consecutive_failures = 0
-        consecutive_successes = 0
-        last_success_log = 0
-        ping_interval = 1.0
-        first_ping = True
-        
-        while self.is_running:
-            loop_start = time.time()
-            
-            # Increment total pings counter
-            self.total_pings[ip_address] += 1
-            
-            # Use TCPing handler
-            is_up, ping_time = self.ping_handler.ping_address(ip_address, ping_type)
-            current_time = time.time()
-            
-            if is_up:
-                consecutive_successes += 1
-                consecutive_failures = 0
-                
-                if not self.ip_status[ip_address] and consecutive_successes >= 2:  # Need 2 successful pings to confirm recovery
-                    self.log_event(f"{ping_type.upper()}: Connection restored to {ip_address} - time={ping_time}ms")
-                    self.log_to_csv(
-                        ping_type.upper(),
-                        ip_address,
-                        "RESTORED",
-                        ping_time,
-                        self.get_network_type()
-                    )
-                    self.down_start_times[ip_address] = None
-                    self.ip_status[ip_address] = True
-                    self.failure_logged[ip_address] = False
-                
-                elif first_ping or current_time - last_success_log >= 300:
-                    self.log_event(f"{ping_type.upper()}: Response from {ip_address} - time={ping_time}ms")
-                    self.log_to_csv(
-                        ping_type.upper(),
-                        ip_address,
-                        "UP",
-                        ping_time,
-                        self.get_network_type()
-                    )
-                    last_success_log = current_time
-                
-                first_ping = False
-                self.root.after(0, lambda: self.update_status_indicator("up", ping_type))
-            else:
-                consecutive_failures += 1
-                consecutive_successes = 0
-                self.failed_pings[ip_address] += 1
-                
-                if self.ip_status[ip_address] and consecutive_failures >= 3:  # Need 3 failures to confirm down
-                    self.ip_status[ip_address] = False
-                    self.down_start_times[ip_address] = current_time
-                    if not self.failure_logged[ip_address]:
-                        self.log_event(f"{ping_type.upper()} ALERT: Connection lost to {ip_address}")
-                        self.log_to_csv(
-                            ping_type.upper(),
-                            ip_address,
-                            "ALERT",
-                            None,
-                            self.get_network_type()
-                        )
-                        self.failure_logged[ip_address] = True
-                
-                self.root.after(0, lambda: self.update_status_indicator("down", ping_type))
-            
-            # Sleep for remaining time
-            elapsed = time.time() - loop_start
-            if elapsed < ping_interval:
-                time.sleep(ping_interval - elapsed)
+            self.log_event(f"ERROR: Failed to write to log file: {str(e)}")
 
     def load_settings(self):
         self.saved_settings = {}
@@ -291,7 +280,13 @@ class PingTool:
         self.root.destroy()
 
     def create_network_frame(self):
-        """Create the network profile section"""
+        """Create the network profile section
+        
+        This section will be expanded in the future with:
+        - Additional network checks
+        - More detailed network information
+        - New monitoring features
+        """
         self.network_frame = ctk.CTkFrame(self.main_frame)
         self.network_frame.pack(fill="x", padx=5, pady=5)
         
@@ -317,14 +312,25 @@ class PingTool:
 
             cmd = ["powershell", "-Command", 
                   "Get-NetConnectionProfile | Select-Object -ExpandProperty NetworkCategory"]
-            result = subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo)
+            result = subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo, timeout=5)
+            
+            if result.returncode != 0:
+                raise Exception(f"PowerShell command failed: {result.stderr}")
+                
             profile = result.stdout.strip()
             
-            # Get network adapter info
+            # Get network adapter info with timeout
             cmd_adapter = ["powershell", "-Command", 
                          "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -First 1 | Select-Object -ExpandProperty Name"]
-            adapter_result = subprocess.run(cmd_adapter, capture_output=True, text=True, startupinfo=startupinfo)
+            adapter_result = subprocess.run(cmd_adapter, capture_output=True, text=True, startupinfo=startupinfo, timeout=5)
+            
+            if adapter_result.returncode != 0:
+                raise Exception(f"Failed to get adapter info: {adapter_result.stderr}")
+                
             adapter_name = adapter_result.stdout.strip()
+            
+            if not adapter_name:
+                raise Exception("No active network adapter found")
             
             if profile == "DomainAuthenticated":
                 color = "#00B050"  # Green
@@ -334,9 +340,16 @@ class PingTool:
                 text = f"Warning: {profile} Network ({adapter_name})"
             
             self.network_label.configure(text=text, text_color=color)
+        except subprocess.TimeoutExpired:
+            self.network_label.configure(
+                text="Error: Network check timed out. Please try again.", 
+                text_color="#FF0000"
+            )
         except Exception as e:
-            self.network_label.configure(text=f"Error checking network: {str(e)}", 
-                                       text_color="#FF0000")
+            self.network_label.configure(
+                text=f"Error checking network: {str(e)}", 
+                text_color="#FF0000"
+            )
 
     def create_ip_frame(self):
         """Create the IP address input section"""
@@ -365,7 +378,7 @@ class PingTool:
                      command=lambda: self.save_single_ip("gateway"),
                      width=60).pack(side="left", padx=5)
         
-        self.gateway_indicator = ctk.CTkLabel(gateway_frame, text="⬤", 
+        self.gateway_indicator = ctk.CTkLabel(gateway_frame, text="●", 
                                             text_color="gray")
         self.gateway_indicator.pack(side="right", padx=5)
         
@@ -373,8 +386,8 @@ class PingTool:
                                          font=ctk.CTkFont(size=12), width=150)
         self.gateway_status.pack(side="right", padx=5)
         
-        # LAN IP row
-        ctk.CTkLabel(lan_frame, text="LAN IP:", 
+        # Google DNS row (formerly LAN IP)
+        ctk.CTkLabel(lan_frame, text="Google DNS:", 
                     font=ctk.CTkFont(size=12), width=80).pack(side="left", padx=5)
         
         self.lan_ip_entry = ctk.CTkEntry(lan_frame, width=200)
@@ -384,7 +397,7 @@ class PingTool:
                      command=lambda: self.save_single_ip("lan"),
                      width=60).pack(side="left", padx=5)
         
-        self.lan_indicator = ctk.CTkLabel(lan_frame, text="⬤", 
+        self.lan_indicator = ctk.CTkLabel(lan_frame, text="●", 
                                         text_color="gray")
         self.lan_indicator.pack(side="right", padx=5)
         
@@ -402,27 +415,40 @@ class PingTool:
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = subprocess.SW_HIDE
 
-            # Get default gateway
+            # Get default gateway with timeout
             cmd = ["powershell", "-Command", 
                   "(Get-NetRoute -DestinationPrefix '0.0.0.0/0' | Select-Object -First 1).NextHop"]
-            result = subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5, startupinfo=startupinfo)
+            
+            if result.returncode != 0:
+                raise Exception(f"Failed to detect gateway: {result.stderr}")
+                
             gateway = result.stdout.strip()
             if gateway:
                 self.gateway_ip_entry.delete(0, tk.END)
                 self.gateway_ip_entry.insert(0, gateway)
+            else:
+                raise Exception("No gateway detected")
             
             # Only set LAN IP if not already saved
             if not self.saved_settings.get('lan_ip'):
-                hostname = socket.gethostname()
-                local_ip = socket.gethostbyname(hostname)
-                if local_ip:
-                    self.lan_ip_entry.delete(0, tk.END)
-                    self.lan_ip_entry.insert(0, local_ip)
+                try:
+                    hostname = socket.gethostname()
+                    local_ip = socket.gethostbyname(hostname)
+                    if local_ip:
+                        self.lan_ip_entry.delete(0, tk.END)
+                        self.lan_ip_entry.insert(0, local_ip)
+                except socket.gaierror:
+                    messagebox.showwarning("Warning", "Could not detect local IP address")
             else:
                 self.lan_ip_entry.delete(0, tk.END)
                 self.lan_ip_entry.insert(0, self.saved_settings['lan_ip'])
+        except subprocess.TimeoutExpired:
+            messagebox.showerror("Error", "Gateway detection timed out. Please try again or enter IP manually.")
+        except PermissionError:
+            messagebox.showerror("Error", "Access denied. Please run as administrator for automatic gateway detection.")
         except Exception as e:
-            print(f"Error detecting IP addresses: {e}")
+            messagebox.showerror("Error", f"Failed to detect IP addresses: {str(e)}")
 
     def create_control_frame(self):
         """Create the control buttons section"""
@@ -451,10 +477,17 @@ class PingTool:
                                          font=ctk.CTkFont(family="Consolas", size=11))
         self.results_text.pack(fill="both", expand=True, padx=5, pady=5)
 
-    def update_status_indicator(self, status, ping_type):
-        """Update the status indicators in the GUI"""
-        indicator = self.gateway_indicator if ping_type == "gateway" else self.lan_indicator
-        status_label = self.gateway_status if ping_type == "gateway" else self.lan_status
+    def update_status_indicator(self, status, target):
+        """Update the status indicators in the GUI
+        
+        This method handles visual updates with a small delay (350ms)
+        to prevent flickering while maintaining responsiveness.
+        
+        Note: This is purely for GUI updates and doesn't affect
+        the actual ping behavior
+        """
+        indicator = self.gateway_indicator if target == "gateway" else self.lan_indicator
+        status_label = self.gateway_status if target == "gateway" else self.lan_status
         
         if status == "up":
             color = "#00B050"  # Green
@@ -468,7 +501,12 @@ class PingTool:
         else:
             color = "gray"
             text = "Not Running"
-            
+        
+        # Add a delay to smooth out rapid status changes
+        self.root.after(350, lambda: self._apply_status_update(indicator, status_label, color, text))
+    
+    def _apply_status_update(self, indicator, status_label, color, text):
+        """Actually apply the status update after delay"""
         indicator.configure(text_color=color)
         status_label.configure(text=text)
 
@@ -507,10 +545,18 @@ class PingTool:
         
         # Log test start
         self.log_event("=== Network Connection Test Started ===")
+        self.log_to_csv(
+            "INFO",
+            "",
+            "=== Network Connection Test Started ===",
+            None,
+            self.get_network_type(),
+            skip_packet_loss=True
+        )
         if gateway_ip_address:
             self.log_event(f"Testing Gateway IP: {gateway_ip_address}")
         if lan_ip_address:
-            self.log_event(f"Testing LAN IP: {lan_ip_address}")
+            self.log_event(f"Testing Google DNS: {lan_ip_address}")
         
         # Reset status tracking
         self.last_csv_log_time = 0
@@ -522,15 +568,15 @@ class PingTool:
         self.gateway_ping_thread.daemon = True
         self.gateway_ping_thread.start()
         
-        # Start LAN thread if IP provided
+        # Start Google DNS thread if IP provided
         if lan_ip_address:
-            self.update_status_indicator("starting", "lan")
+            self.update_status_indicator("starting", "google_dns")
             self.lan_ping_thread = threading.Thread(target=self.ping, 
-                                                  args=(lan_ip_address, "lan"))
+                                                  args=(lan_ip_address, "google_dns"))
             self.lan_ping_thread.daemon = True
             self.lan_ping_thread.start()
         else:
-            self.update_status_indicator("not_running", "lan")
+            self.update_status_indicator("not_running", "google_dns")
 
     def stop_ping(self):
         """Stop the ping tests"""
@@ -544,7 +590,7 @@ class PingTool:
             
             # Reset status indicators
             self.update_status_indicator("not_running", "gateway")
-            self.update_status_indicator("not_running", "lan")
+            self.update_status_indicator("not_running", "google_dns")
             
             # Clear threads
             if hasattr(self, 'gateway_ping_thread'):
@@ -553,45 +599,38 @@ class PingTool:
                 self.lan_ping_thread = None
 
     def log_event(self, message):
-        """Log events to GUI and file"""
-        try:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
-            # Format the log entry
-            if message.startswith("==="):
-                log_entry = f"\n{timestamp} - {message}\n{'=' * 50}"
-            elif "Testing" in message:
-                log_entry = f"{timestamp} - {message}\n{'-' * 50}"
-            else:
-                # Pad GATEWAY and LAN with smaller width
-                message = message.replace("GATEWAY:", "GATEWAY:".ljust(8))
-                message = message.replace("LAN:", "LAN:".ljust(8))
-                
-                # Align ALERT messages with reduced padding
-                message = message.replace("GATEWAY ALERT:", "GATEWAY:".ljust(8) + "ALERT:")
-                message = message.replace("LAN ALERT:", "LAN:".ljust(8) + "ALERT:")
-                
-                # Pad IP addresses with smaller width
-                if "192.168.1.254" in message:
-                    message = message.replace("192.168.1.254", "192.168.1.254".ljust(13))
-                if "8.8.8.8" in message:
-                    message = message.replace("8.8.8.8", "8.8.8.8".ljust(13))
-                
-                log_entry = f"{timestamp} - {message}"
-            
-            # Update GUI
-            self.results_text.insert("end", log_entry + "\n")
-            self.results_text.see("end")
-            
-        except Exception as e:
-            print(f"Error writing to log: {e}")
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Identify if this line includes a known label like "GATEWAY:" or "GOOGLE_DNS:"
+        label = ""
+        rest = message.strip()
+
+        # Check if the message starts with our known prefixes
+        # We'll align them in a field wide enough for "GOOGLE_DNS" since it's longer
+        if rest.startswith("GATEWAY:"):
+            label = "GATEWAY"
+            rest = rest.replace("GATEWAY:", "").strip()
+        elif rest.startswith("GOOGLE_DNS:"):
+            label = "GOOGLE_DNS"
+            rest = rest.replace("GOOGLE_DNS:", "").strip()
+
+        # Format the output line:
+        # Timestamp (fixed width), two spaces, label (left aligned in 10 chars), two spaces, then rest of the message
+        # If there's no label (like start/stop lines), we won't leave that space
+        if label:
+            formatted_line = f"{timestamp}  {label:<10}  {rest}"
+        else:
+            formatted_line = f"{timestamp}  {rest}"
+
+        self.results_text.insert("end", formatted_line + "\n")
+        self.results_text.see("end")
 
     def format_duration(self, seconds):
         """Format duration in a human-readable format"""
         if seconds < 60:
             return f"{seconds:.1f}s"
         
-        duration = timedelta(seconds=seconds)
+        duration = datetime.timedelta(seconds=seconds)
         days = duration.days
         hours = duration.seconds // 3600
         minutes = (duration.seconds % 3600) // 60
@@ -609,7 +648,144 @@ class PingTool:
             
         return " ".join(parts)
 
+    def ping(self, ip_address, ping_type):
+        """Execute ping tests for a given IP address
+        
+        This is the main monitoring function that:
+        1. Tracks connection status
+        2. Handles failure detection
+        3. Manages recovery detection
+        4. Calculates packet loss
+        
+        Future enhancements planned for additional monitoring capabilities
+        """
+        #################################################################
+        # CRITICAL SECTION - CORE PING BEHAVIOR AND CONNECTION MONITORING
+        # DO NOT MODIFY THIS SECTION WITHOUT CAREFUL REVIEW AND DISCUSSION
+        # This section handles:
+        # 1. Connection state tracking
+        # 2. Failure detection logic (3 consecutive failures)
+        # 3. Recovery detection (2 consecutive successes)
+        # 4. Packet loss calculation
+        # Modifications here could affect reliability of connection monitoring
+        #################################################################
+        
+        # Initialize tracking for this IP if not exists
+        if ip_address not in self.total_pings:
+            self.total_pings[ip_address] = 0
+            self.failed_pings[ip_address] = 0
+        
+        if ip_address not in self.failure_logged:
+            self.failure_logged[ip_address] = False
+            self.ip_status[ip_address] = True
+            self.down_start_times[ip_address] = None
+            
+        consecutive_failures = 0
+        consecutive_successes = 0
+        last_success_log = 0
+        ping_interval = 1.0
+        first_ping = True
+        
+        while self.is_running:
+            loop_start = time.time()
+            
+            # Increment total pings counter
+            self.total_pings[ip_address] += 1
+            
+            # Use TCPing handler
+            is_up, ping_time = self.ping_handler.ping_address(ip_address, ping_type)
+            current_time = time.time()
+            
+            if is_up:
+                consecutive_successes += 1
+                consecutive_failures = 0
+                
+                if not self.ip_status[ip_address] and consecutive_successes >= 2:  # Need 2 successful pings to confirm recovery
+                    self.log_event(f"{ping_type.upper()}:     Connection restored to {ip_address} - time={ping_time}ms")
+                    self.log_to_csv(
+                        ping_type.upper(),
+                        ip_address,
+                        "RESTORED",
+                        ping_time,
+                        self.get_network_type()
+                    )
+                    self.down_start_times[ip_address] = None
+                    self.ip_status[ip_address] = True
+                    self.failure_logged[ip_address] = False
+                    self.update_status_indicator("up", ping_type)
+                
+                elif first_ping:  # Only log UP status on first ping
+                    self.log_event(f"{ping_type.upper()}:     Response from {ip_address} - time={ping_time}ms")
+                    self.log_to_csv(
+                        ping_type.upper(),
+                        ip_address,
+                        "UP",
+                        ping_time,
+                        self.get_network_type()
+                    )
+                
+                first_ping = False
+                self.update_status_indicator("up", ping_type)
+            else:
+                consecutive_failures += 1
+                consecutive_successes = 0
+                self.failed_pings[ip_address] += 1
+                
+                if self.ip_status[ip_address] and consecutive_failures >= 3:  # Need 3 failures to confirm down
+                    self.ip_status[ip_address] = False
+                    self.down_start_times[ip_address] = current_time
+                    if not self.failure_logged[ip_address]:
+                        self.log_event(f"{ping_type.upper()}:     Connection lost to {ip_address}")
+                        self.log_to_csv(
+                            ping_type.upper(),
+                            ip_address,
+                            f"Connection lost to {ip_address}",
+                            None,
+                            self.get_network_type(),
+                            skip_packet_loss=True
+                        )
+                        self.failure_logged[ip_address] = True
+                    self.update_status_indicator("down", ping_type)
+            
+            # Sleep for remaining time
+            elapsed = time.time() - loop_start
+            if elapsed < ping_interval:
+                time.sleep(ping_interval - elapsed)
+
+        #################################################################
+        # END OF CRITICAL SECTION - CORE PING BEHAVIOR
+        #################################################################
+
 if __name__ == "__main__":
+    # Check and set PowerShell execution policy if needed
+    try:
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        
+        # Try to get current execution policy
+        check_cmd = ["powershell", "Get-ExecutionPolicy"]
+        result = subprocess.run(check_cmd, capture_output=True, text=True, startupinfo=startupinfo)
+        current_policy = result.stdout.strip()
+        
+        if current_policy in ["Restricted", "AllSigned"]:
+            # Need admin rights to change policy
+            if ctypes.windll.shell32.IsUserAnAdmin():
+                set_cmd = ["powershell", "Set-ExecutionPolicy", "RemoteSigned", "-Force"]
+                subprocess.run(set_cmd, startupinfo=startupinfo)
+            else:
+                messagebox.showwarning(
+                    "PowerShell Policy", 
+                    "Please run GPing as administrator for automatic gateway detection."
+                )
+    except Exception as e:
+        print(f"Error checking PowerShell policy: {e}")
+    
+    # Set appearance mode and default color theme
+    ctk.set_appearance_mode("dark")
+    ctk.set_default_color_theme("blue")
+    
+    # Create and run the main window
     root = tk.Tk()
     app = PingTool(root)
     root.mainloop()
