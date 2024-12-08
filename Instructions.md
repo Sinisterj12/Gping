@@ -1,29 +1,87 @@
-The AI's Instructions for GPing tool in this project
+# AI Instructions for GPing Project
 
-**Gping is for Windows environments using tcping.exe that is located in the root directory
-GPing is a tool used in grocery stores to monitor network connectivity. It is a simple and effective tool that can be used to diagnose network issues and improve network performance.**
+## Project Overview
+GPing is a critical network monitoring tool designed for Windows environments, specifically used in grocery stores for network diagnostics. The tool uses tcping.exe for TCP-based connectivity testing and provides real-time monitoring with a modern GUI interface.
 
-GPing will use a CSV for logging that is in the root directory and should always be in the root directory for data to send to the ISP or NCR for troubleshooting
-    This file should be named GPing12052024.csv where 12052024 is the current date
-    This file should have the following headers:
-        Timestamp, Event Type, IP Address, Status, Response Time (ms), Network Type, Details, Total Pings, Failed Pings, Packet Loss %
-    This file should be updated with new events as they happen
-    This file should never get overwritten
-    This file should be saved in the root directory
-    This file should report the following events:
-        "Timestamp,Event Type,IP Address,Status,Response Time (ms),Network Type,Details,Total Pings,Failed Pings,Packet Loss %"
-       
+## Core Requirements
 
-GPing will test the gateway address and it automatically detect the IP address of the gateway
-Gping will test the Google DNS address and it will be a fixed entry
+### Environment and Dependencies
+- Windows-only environment
+- Requires tcping.exe in root directory
+- Python with CustomTkinter for modern UI
+- Administrator rights needed for network detection
 
-Gping Gui
-    This gui will show the current status of the gateway and Google DNS
-    This gui will show connected/starting/disconnected for both the gateway and Google DNS
-    This gui has a Connection log for easy viewing for the technician
-    This gui has a Start button to start the tests
-    This gui has a Stop button to stop the tests
-    This gui needs to have check to have options to turn the test on or off for EACH IP in the GUI
+### CSV Logging System
+- Files must follow format: `GPingMMDDYYYY.csv` (current date)
+- Location: Root directory only (critical for ISP/NCR troubleshooting)
+- Never overwrite existing logs
+- Headers required:
+  ```
+  Date,Time,Type,IP Address,Event,Response Time,Network Type,Downtime,Packet Loss %,Details
+  ```
+- Buffer writes to optimize performance
+- Auto-cleanup after 7 days
 
-Gping Gui will have a network profile section that will show the current network type
-    This gui will have a check button that will show the current network type
+### Network Testing
+- Gateway IP:
+  - Must auto-detect using PowerShell
+  - Allow manual override
+  - Test using TCP port 80
+- Google DNS (8.8.8.8):
+  - Fixed entry as fallback
+  - Test using TCP port 53
+- Connection States:
+  - UP: 2 successful pings required
+  - DOWN: 3 consecutive failures required
+  - Track packet loss and response times
+
+### GUI Implementation
+- Status Display:
+  - ● Connected (Green)
+  - ⬤ Disconnected (Red)
+  - ◌ Starting (Orange)
+  - ○ Not Running (Gray)
+- Controls:
+  - Single toggle button for Start/Stop
+  - Checkboxes for enabling/disabling each IP test
+  - Network type check button
+- Connection Log:
+  - Real-time updates
+  - Formatted timestamps
+  - Clear status messages
+
+## Critical Behaviors
+
+### Error Handling
+- Handle tcping.exe not found
+- Manage network detection failures
+- Buffer CSV writes for performance
+- Clean recovery from connection drops
+
+### Performance Considerations
+- Throttle GUI updates (350ms minimum interval)
+- Buffer log writes (10 entries or 5 seconds)
+- Cleanup memory during log maintenance
+- Use daemon threads for ping operations
+
+### User Experience
+- Clear status indicators
+- Immediate feedback on actions
+- Proper thread cleanup on exit
+- Save user preferences
+
+## Code Structure
+- TCPingHandler: Core ping operations (DO NOT MODIFY)
+- PingTool: Main application class
+  - Network frame: Profile checking
+  - IP frame: Address configuration
+  - Control frame: Start/Stop operations
+  - Results frame: Live monitoring
+
+## Future Considerations
+- Speed test integration planned
+- Enhanced network profiling
+- Additional monitoring metrics
+- Custom IP configuration options
+
+Remember: This tool is critical for store operations. Maintain reliability and performance while ensuring clear status reporting for technicians.

@@ -109,7 +109,7 @@ class TCPingHandler:
 # Each section (frames) handles different aspects:
 # - Network Frame: Shows network profile (more features coming)
 # - IP Frame: Configure gateway and LAN IPs
-# - Control Frame: Start/Stop buttons
+# - Control Frame: Start/Stop button
 # - Results Frame: Real-time log display
 #################################################################
 
@@ -244,15 +244,16 @@ class PingTool:
         return round((self.failed_pings[ip_address] / self.total_pings[ip_address]) * 100, 1)
 
     def log_to_csv(self, event_type, ip_address, status, response_time=None, network_type=None, details=None, skip_packet_loss=False):
-        """Log events to CSV file"""
+        """Log events to CSV file with buffering for better performance"""
         try:
-            # Ensure logs directory exists
-            if not os.path.exists(self.logs_dir):
-                os.makedirs(self.logs_dir)
-                
+            # Initialize buffer if needed
+            if not hasattr(self, '_csv_buffer'):
+                self._csv_buffer = []
+                self._last_flush = time.time()
+            
             now = datetime.now()
             date = now.strftime("%Y-%m-%d")
-            time = now.strftime("%H:%M:%S")
+            time_str = now.strftime("%H:%M:%S")
             
             response_time_str = f"{response_time:.1f}ms" if response_time is not None else ''
             packet_loss = f"{self.calculate_packet_loss(ip_address)}%" if not skip_packet_loss else ''
@@ -269,22 +270,29 @@ class PingTool:
                 details = status
                 status = "SESSION"
             
-            with open(self.csv_filename, 'a', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow([
-                    date,
-                    time,
-                    event_type,
-                    ip_address,
-                    status,
-                    response_time_str,
-                    network_type if network_type else '',
-                    downtime,
-                    packet_loss,
-                    details
-                ])
-        except PermissionError:
-            self.log_event("ERROR: Cannot write to log file. Please check permissions.")
+            row = [
+                date,
+                time_str,
+                event_type,
+                ip_address,
+                status,
+                response_time_str,
+                network_type if network_type else '',
+                downtime,
+                packet_loss,
+                details
+            ]
+            
+            self._csv_buffer.append(row)
+            
+            # Flush buffer if it's large enough or enough time has passed
+            if len(self._csv_buffer) >= 10 or time.time() - self._last_flush > 5:
+                with open(self.csv_filename, 'a', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerows(self._csv_buffer)
+                self._csv_buffer = []
+                self._last_flush = time.time()
+                
         except Exception as e:
             self.log_event(f"ERROR: Failed to write to log file: {str(e)}")
 
@@ -506,10 +514,6 @@ class PingTool:
         self.start_button = ctk.CTkButton(control_frame, text="Start Tests", 
                                         command=self.start_ping, state="disabled")
         self.start_button.pack(side="left", padx=5, pady=5)
-        
-        self.stop_button = ctk.CTkButton(control_frame, text="Stop Tests", 
-                                       command=self.stop_ping, state="disabled")
-        self.stop_button.pack(side="left", padx=5, pady=5)
 
     def create_results_frame(self):
         """Create the results display section"""
@@ -526,20 +530,27 @@ class PingTool:
         self.results_text.pack(fill="both", expand=True, padx=5, pady=5)
 
     def update_status_indicator(self, status, target):
-        """Update the status indicators in the GUI
+        """Update status indicators with throttling for better performance"""
+        if not hasattr(self, '_last_update'):
+            self._last_update = {}
         
-        This method handles visual updates with a small delay (350ms)
-        to prevent flickering while maintaining responsiveness.
+        current_time = time.time()
+        if target in self._last_update and current_time - self._last_update[target] < 0.35:
+            return
+            
+        self._last_update[target] = current_time
         
-        Note: This is purely for GUI updates and doesn't affect
-        the actual ping behavior
-        """
-        indicator = self.gateway_indicator if target == "gateway" else self.lan_indicator
-        status_label = self.gateway_status if target == "gateway" else self.lan_status
+        if target == "gateway":
+            indicator = self.gateway_status
+            status_label = self.gateway_indicator
+        else:
+            indicator = self.lan_status
+            status_label = self.lan_indicator
+            
+        color = self.status_colors.get(status, "gray")
+        icon = self.status_icons.get(status, "○")
         
-        icon = self.status_icons.get(status, self.status_icons["not_running"])
-        color = self.status_colors.get(status, self.status_colors["not_running"])
-        
+        # Set the status text
         if status == "up":
             text = "Connected"
         elif status == "down":
@@ -549,13 +560,14 @@ class PingTool:
         else:
             text = "Not Running"
         
-        # Add a delay to smooth out rapid status changes
-        self.root.after(350, lambda: self._apply_status_update(indicator, status_label, color, text, icon))
+        # Schedule the update
+        self.root.after(10, self._apply_status_update, indicator, status_label, color, text, icon)
 
     def _apply_status_update(self, indicator, status_label, color, text, icon):
         """Actually apply the status update after delay"""
         indicator.configure(text=icon, text_color=color)
-        status_label.configure(text=text)
+        if status_label:
+            status_label.configure(text=text)
 
     def save_single_ip(self, ip_type):
         """Save IP address to settings file"""
@@ -575,63 +587,52 @@ class PingTool:
 
     def start_ping(self):
         """Start the ping tests"""
-        gateway_ip_address = self.gateway_ip_entry.get()
-        lan_ip_address = self.lan_ip_entry.get()
-        
-        if not gateway_ip_address and not lan_ip_address:
-            messagebox.showwarning("Input Error", "Please enter at least one IP address.")
-            return
+        if not self.is_running:
+            self.is_running = True
+            self.start_button.configure(text="Stop Tests")
+            self.log_event("=== Network Connection Test Started ===")
             
-        self.is_running = True
-        self.start_button.configure(state="disabled")
-        self.stop_button.configure(state="normal")
-        
-        # Reset counters for new test
-        self.total_pings = {}
-        self.failed_pings = {}
-        
-        # Log test start
-        self.log_event("=== Network Connection Test Started ===")
-        self.log_to_csv(
-            "INFO",
-            "",
-            "=== Network Connection Test Started ===",
-            None,
-            self.get_network_type(),
-            skip_packet_loss=True
-        )
-        if gateway_ip_address:
-            self.log_event(f"Testing Gateway IP: {gateway_ip_address}")
-        if lan_ip_address:
-            self.log_event(f"Testing Google DNS: {lan_ip_address}")
-        
-        # Reset status tracking
-        self.last_csv_log_time = 0
-        
-        # Start gateway thread
-        if self.gateway_check.get():
-            self.update_status_indicator("starting", "gateway")
-            self.gateway_ping_thread = threading.Thread(target=self.ping, 
-                                                      args=(gateway_ip_address, "gateway"))
-            self.gateway_ping_thread.daemon = True
-            self.gateway_ping_thread.start()
-        
-        # Start Google DNS thread if IP provided
-        if self.dns_check.get():
-            self.update_status_indicator("starting", "google_dns")
-            self.lan_ping_thread = threading.Thread(target=self.ping, 
-                                                  args=(lan_ip_address, "google_dns"))
-            self.lan_ping_thread.daemon = True
-            self.lan_ping_thread.start()
+            # Initialize counters for both IPs
+            gateway_ip = self.gateway_ip_entry.get()
+            google_dns = self.lan_ip_entry.get()
+            
+            # Reset counters
+            self.total_pings = {
+                gateway_ip: 0,
+                google_dns: 0
+            }
+            self.failed_pings = {
+                gateway_ip: 0,
+                google_dns: 0
+            }
+            
+            # Start gateway thread if enabled
+            if self.gateway_check.get():
+                self.update_status_indicator("starting", "gateway")
+                self.gateway_ping_thread = threading.Thread(
+                    target=self.ping,
+                    args=(gateway_ip, "gateway")
+                )
+                self.gateway_ping_thread.daemon = True
+                self.gateway_ping_thread.start()
+            
+            # Start Google DNS thread if enabled
+            if self.dns_check.get():
+                self.update_status_indicator("starting", "google_dns")
+                self.lan_ping_thread = threading.Thread(
+                    target=self.ping,
+                    args=(google_dns, "google_dns")
+                )
+                self.lan_ping_thread.daemon = True
+                self.lan_ping_thread.start()
         else:
-            self.update_status_indicator("not_running", "google_dns")
+            self.stop_ping()
 
     def stop_ping(self):
         """Stop the ping tests"""
         if self.is_running:
             self.is_running = False
-            self.start_button.configure(state="normal")
-            self.stop_button.configure(state="disabled")
+            self.start_button.configure(text="Start Tests")
             
             # Log final status
             self.log_event("=== Network Connection Test Stopped ===")
@@ -741,7 +742,13 @@ class PingTool:
             self.total_pings[ip_address] += 1
             
             # Use TCPing handler
-            is_up, ping_time = self.ping_handler.ping_address(ip_address, ping_type)
+            try:
+                is_up, ping_time = self.ping_handler.ping_address(ip_address, ping_type)
+            except Exception as e:
+                self.log_event(f"Error pinging {ip_address}: {str(e)}")
+                is_up = False
+                ping_time = None
+            
             current_time = time.time()
             
             if is_up:
@@ -814,22 +821,24 @@ class PingTool:
             self.start_button.configure(state="disabled")
 
     def cleanup_old_logs(self):
-        """Remove CSV log files older than 7 days"""
+        """Remove CSV log files older than 7 days and clean memory"""
         try:
             current_time = datetime.now()
-            for file in os.listdir(self.logs_dir):
-                if file.endswith('.csv'):
-                    file_path = os.path.join(self.logs_dir, file)
-                    file_time = datetime.fromtimestamp(os.path.getctime(file_path))
-                    if (current_time - file_time).days > 7:
+            for filename in os.listdir(self.logs_dir):
+                if filename.endswith('.csv'):
+                    filepath = os.path.join(self.logs_dir, filename)
+                    file_time = datetime.fromtimestamp(os.path.getctime(filepath))
+                    if current_time - file_time > timedelta(days=7):
                         try:
-                            os.remove(file_path)
-                        except PermissionError:
-                            self.log_event(f"WARNING: Could not delete old log file: {file} - Permission denied")
-                        except Exception as e:
-                            self.log_event(f"WARNING: Could not delete old log file: {file} - {str(e)}")
+                            os.remove(filepath)
+                        except:
+                            continue
+            
+            # Memory cleanup
+            import gc
+            gc.collect()
         except Exception as e:
-            self.log_event(f"WARNING: Error during log cleanup: {str(e)}")
+            print(f"Error cleaning up logs: {e}")
 
 if __name__ == "__main__":
     # Check and set PowerShell execution policy if needed
