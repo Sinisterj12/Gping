@@ -137,6 +137,21 @@ class PingTool:
             self.root.destroy()
             return
             
+        # Status icons dictionary
+        self.status_icons = {
+            "up": "●",         # Solid circle
+            "down": "⬤",       # Black circle
+            "starting": "◌",   # Dotted circle
+            "not_running": "○"  # Empty circle
+        }
+        
+        self.status_colors = {
+            "up": "#00B050",      # Green
+            "down": "#FF0000",    # Red
+            "starting": "#FFA500", # Orange
+            "not_running": "gray"  # Gray
+        }
+        
         # Use system appearance mode
         ctk.set_appearance_mode("system")
         ctk.set_default_color_theme("blue")
@@ -174,10 +189,11 @@ class PingTool:
         self.down_start_times = {}
         self.total_downtime = {}
         
-        # Create logs directory
+        # Create logs directory and cleanup old logs
         self.logs_dir = "logs"
         if not os.path.exists(self.logs_dir):
             os.makedirs(self.logs_dir)
+        self.cleanup_old_logs()
             
         # Initialize CSV
         self.init_csv_log()
@@ -200,13 +216,16 @@ class PingTool:
                 with open(self.csv_filename, 'w', newline='') as csvfile:
                     writer = csv.writer(csvfile)
                     writer.writerow([
-                        'Timestamp',
-                        'Event Type',
+                        'Date',
+                        'Time',
+                        'Type',           # GATEWAY or GOOGLE_DNS
                         'IP Address',
-                        'Status',
+                        'Event',          # UP, LOST, RESTORED
                         'Response Time',
                         'Network Type',
-                        'Packet Loss %'
+                        'Downtime',       # How long connection was down
+                        'Packet Loss %',
+                        'Details'         # Additional info like start/stop markers
                     ])
         except PermissionError:
             messagebox.showerror("Error", "Cannot create log file. Please run as administrator or check folder permissions.")
@@ -231,19 +250,38 @@ class PingTool:
             if not os.path.exists(self.logs_dir):
                 os.makedirs(self.logs_dir)
                 
-            response_time_str = f"{response_time:.3f}ms" if response_time is not None else ''
+            now = datetime.now()
+            date = now.strftime("%Y-%m-%d")
+            time = now.strftime("%H:%M:%S")
+            
+            response_time_str = f"{response_time:.1f}ms" if response_time is not None else ''
             packet_loss = f"{self.calculate_packet_loss(ip_address)}%" if not skip_packet_loss else ''
+            
+            # Calculate downtime if this is a RESTORED event
+            downtime = ''
+            if "RESTORED after" in status:
+                downtime = status.split("RESTORED after ")[1].split(",")[0]
+                status = "RESTORED"  # Clean up status
+            
+            # Format details
+            if "===" in str(details or ""):
+                event_type = "INFO"
+                details = status
+                status = "SESSION"
             
             with open(self.csv_filename, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow([
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Timestamp
-                    event_type,                                     # Event Type
-                    ip_address,                                     # IP Address
-                    status,                                        # Status
-                    response_time_str,                             # Response Time
-                    network_type if network_type is not None else '',  # Network Type
-                    packet_loss                                    # Packet Loss %
+                    date,
+                    time,
+                    event_type,
+                    ip_address,
+                    status,
+                    response_time_str,
+                    network_type if network_type else '',
+                    downtime,
+                    packet_loss,
+                    details
                 ])
         except PermissionError:
             self.log_event("ERROR: Cannot write to log file. Please check permissions.")
@@ -368,6 +406,10 @@ class PingTool:
         lan_frame.pack(fill="x", pady=2)
         
         # Gateway IP row
+        self.gateway_check = ctk.CTkCheckBox(gateway_frame, text="Gateway IP", 
+                                            command=self.update_start_button_state)
+        self.gateway_check.pack(side="left", padx=(5, 0))
+        
         ctk.CTkLabel(gateway_frame, text="Gateway IP:", 
                     font=ctk.CTkFont(size=12), width=80).pack(side="left", padx=5)
         
@@ -378,8 +420,9 @@ class PingTool:
                      command=lambda: self.save_single_ip("gateway"),
                      width=60).pack(side="left", padx=5)
         
-        self.gateway_indicator = ctk.CTkLabel(gateway_frame, text="●", 
-                                            text_color="gray")
+        self.gateway_indicator = ctk.CTkLabel(gateway_frame, text="○", 
+                                            text_color="gray",
+                                            font=ctk.CTkFont(size=16, weight="bold"))
         self.gateway_indicator.pack(side="right", padx=5)
         
         self.gateway_status = ctk.CTkLabel(gateway_frame, text="Not Running",
@@ -387,6 +430,10 @@ class PingTool:
         self.gateway_status.pack(side="right", padx=5)
         
         # Google DNS row (formerly LAN IP)
+        self.dns_check = ctk.CTkCheckBox(lan_frame, text="Google DNS", 
+                                        command=self.update_start_button_state)
+        self.dns_check.pack(side="left", padx=(5, 0))
+        
         ctk.CTkLabel(lan_frame, text="Google DNS:", 
                     font=ctk.CTkFont(size=12), width=80).pack(side="left", padx=5)
         
@@ -397,8 +444,9 @@ class PingTool:
                      command=lambda: self.save_single_ip("lan"),
                      width=60).pack(side="left", padx=5)
         
-        self.lan_indicator = ctk.CTkLabel(lan_frame, text="●", 
-                                        text_color="gray")
+        self.lan_indicator = ctk.CTkLabel(lan_frame, text="○", 
+                                        text_color="gray",
+                                        font=ctk.CTkFont(size=16, weight="bold"))
         self.lan_indicator.pack(side="right", padx=5)
         
         self.lan_status = ctk.CTkLabel(lan_frame, text="Not Running",
@@ -456,7 +504,7 @@ class PingTool:
         control_frame.pack(fill="x", padx=5, pady=5)
         
         self.start_button = ctk.CTkButton(control_frame, text="Start Tests", 
-                                        command=self.start_ping)
+                                        command=self.start_ping, state="disabled")
         self.start_button.pack(side="left", padx=5, pady=5)
         
         self.stop_button = ctk.CTkButton(control_frame, text="Stop Tests", 
@@ -489,25 +537,24 @@ class PingTool:
         indicator = self.gateway_indicator if target == "gateway" else self.lan_indicator
         status_label = self.gateway_status if target == "gateway" else self.lan_status
         
+        icon = self.status_icons.get(status, self.status_icons["not_running"])
+        color = self.status_colors.get(status, self.status_colors["not_running"])
+        
         if status == "up":
-            color = "#00B050"  # Green
             text = "Connected"
         elif status == "down":
-            color = "#FF0000"  # Red
             text = "Disconnected"
         elif status == "starting":
-            color = "#FFA500"  # Yellow
             text = "Starting..."
         else:
-            color = "gray"
             text = "Not Running"
         
         # Add a delay to smooth out rapid status changes
-        self.root.after(350, lambda: self._apply_status_update(indicator, status_label, color, text))
-    
-    def _apply_status_update(self, indicator, status_label, color, text):
+        self.root.after(350, lambda: self._apply_status_update(indicator, status_label, color, text, icon))
+
+    def _apply_status_update(self, indicator, status_label, color, text, icon):
         """Actually apply the status update after delay"""
-        indicator.configure(text_color=color)
+        indicator.configure(text=icon, text_color=color)
         status_label.configure(text=text)
 
     def save_single_ip(self, ip_type):
@@ -531,8 +578,8 @@ class PingTool:
         gateway_ip_address = self.gateway_ip_entry.get()
         lan_ip_address = self.lan_ip_entry.get()
         
-        if not gateway_ip_address:
-            messagebox.showwarning("Input Error", "Please enter the Gateway IP address.")
+        if not gateway_ip_address and not lan_ip_address:
+            messagebox.showwarning("Input Error", "Please enter at least one IP address.")
             return
             
         self.is_running = True
@@ -562,14 +609,15 @@ class PingTool:
         self.last_csv_log_time = 0
         
         # Start gateway thread
-        self.update_status_indicator("starting", "gateway")
-        self.gateway_ping_thread = threading.Thread(target=self.ping, 
-                                                  args=(gateway_ip_address, "gateway"))
-        self.gateway_ping_thread.daemon = True
-        self.gateway_ping_thread.start()
+        if self.gateway_check.get():
+            self.update_status_indicator("starting", "gateway")
+            self.gateway_ping_thread = threading.Thread(target=self.ping, 
+                                                      args=(gateway_ip_address, "gateway"))
+            self.gateway_ping_thread.daemon = True
+            self.gateway_ping_thread.start()
         
         # Start Google DNS thread if IP provided
-        if lan_ip_address:
+        if self.dns_check.get():
             self.update_status_indicator("starting", "google_dns")
             self.lan_ping_thread = threading.Thread(target=self.ping, 
                                                   args=(lan_ip_address, "google_dns"))
@@ -701,11 +749,13 @@ class PingTool:
                 consecutive_failures = 0
                 
                 if not self.ip_status[ip_address] and consecutive_successes >= 2:  # Need 2 successful pings to confirm recovery
-                    self.log_event(f"{ping_type.upper()}:     Connection restored to {ip_address} - time={ping_time}ms")
+                    downtime = time.time() - self.down_start_times[ip_address]
+                    downtime_str = self.format_duration(downtime)
+                    self.log_event(f"{ping_type.upper()}:     Connection restored to {ip_address} - Response: {ping_time:.1f}ms (Down for {downtime_str})")
                     self.log_to_csv(
                         ping_type.upper(),
                         ip_address,
-                        "RESTORED",
+                        f"RESTORED after {downtime_str}",
                         ping_time,
                         self.get_network_type()
                     )
@@ -715,7 +765,7 @@ class PingTool:
                     self.update_status_indicator("up", ping_type)
                 
                 elif first_ping:  # Only log UP status on first ping
-                    self.log_event(f"{ping_type.upper()}:     Response from {ip_address} - time={ping_time}ms")
+                    self.log_event(f"{ping_type.upper()}:     Response from {ip_address} - Response: {ping_time:.1f}ms")
                     self.log_to_csv(
                         ping_type.upper(),
                         ip_address,
@@ -735,11 +785,11 @@ class PingTool:
                     self.ip_status[ip_address] = False
                     self.down_start_times[ip_address] = current_time
                     if not self.failure_logged[ip_address]:
-                        self.log_event(f"{ping_type.upper()}:     Connection lost to {ip_address}")
+                        self.log_event(f"{ping_type.upper()}:     Connection LOST to {ip_address} at {datetime.now().strftime('%H:%M:%S')}")
                         self.log_to_csv(
                             ping_type.upper(),
                             ip_address,
-                            f"Connection lost to {ip_address}",
+                            "Connection LOST",
                             None,
                             self.get_network_type(),
                             skip_packet_loss=True
@@ -755,6 +805,31 @@ class PingTool:
         #################################################################
         # END OF CRITICAL SECTION - CORE PING BEHAVIOR
         #################################################################
+
+    def update_start_button_state(self):
+        """Enable start button only if at least one test is selected"""
+        if self.gateway_check.get() or self.dns_check.get():
+            self.start_button.configure(state="normal")
+        else:
+            self.start_button.configure(state="disabled")
+
+    def cleanup_old_logs(self):
+        """Remove CSV log files older than 7 days"""
+        try:
+            current_time = datetime.now()
+            for file in os.listdir(self.logs_dir):
+                if file.endswith('.csv'):
+                    file_path = os.path.join(self.logs_dir, file)
+                    file_time = datetime.fromtimestamp(os.path.getctime(file_path))
+                    if (current_time - file_time).days > 7:
+                        try:
+                            os.remove(file_path)
+                        except PermissionError:
+                            self.log_event(f"WARNING: Could not delete old log file: {file} - Permission denied")
+                        except Exception as e:
+                            self.log_event(f"WARNING: Could not delete old log file: {file} - {str(e)}")
+        except Exception as e:
+            self.log_event(f"WARNING: Error during log cleanup: {str(e)}")
 
 if __name__ == "__main__":
     # Check and set PowerShell execution policy if needed
