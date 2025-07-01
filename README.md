@@ -33,14 +33,40 @@ A modern network connectivity monitoring tool with GUI interface.
 ## Requirements
 
 - Windows OS
-- Python 3.x
-- CustomTkinter
-- tcping.exe (included)
 - Administrator rights for network detection
+- tcping.exe (included)
+
+## Installation & Setup
+
+### Using the Pre-built Executable (Recommended)
+1. Download or clone this repository
+2. Run `GPing.exe` directly from the project folder
+
+### Development Setup (UV)
+If you want to modify or develop the application:
+
+1. Install [UV](https://docs.astral.sh/uv/) package manager
+2. Clone this repository
+3. Install dependencies:
+   ```powershell
+   uv sync
+   ```
+4. Run the development version:
+   ```powershell
+   uv run python ping_tool.py
+   ```
+
+### Building from Source
+To create a new executable:
+```powershell
+uv run pyinstaller GPing.spec
+```
 
 ## Usage
 
-1. Run `ping_tool.py`
+1. **Run the application:**
+   - Double-click `GPing.exe` OR
+   - Run from command line: `.\GPing.exe`
 2. Enter Gateway IP (auto-detected) or use default: 192.168.1.254
 3. Enter Google DNS or use default: 8.8.8.8
 4. Select which IPs to monitor using the checkboxes
@@ -58,3 +84,26 @@ The tool creates CSV log files with the following information:
 - Downtime duration tracking
 
 Logs are automatically cleaned up after 7 days to manage disk space.
+
+## Project Structure
+
+```
+GPing/
+├── GPing.exe          # Main executable (ready to run)
+├── ping_tool.py       # Source code
+├── tcping.exe         # TCP ping utility (required)
+├── pyproject.toml     # UV project configuration
+├── uv.lock           # Locked dependencies
+├── GPing.spec        # PyInstaller build configuration
+├── gping_settings.json # Application settings
+└── logs/             # Log files directory
+```
+
+## Development
+
+This project uses [UV](https://docs.astral.sh/uv/) for dependency management. Key commands:
+
+- `uv sync` - Install/update dependencies
+- `uv add package-name` - Add new dependencies
+- `uv run python ping_tool.py` - Run development version
+- `uv run pyinstaller GPing.spec` - Build executable
