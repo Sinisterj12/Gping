@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
-from PyInstaller.utils.win32 import winmanifest
+import sys
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 
@@ -8,43 +9,46 @@ block_cipher = None
 import customtkinter
 ctk_path = os.path.dirname(customtkinter.__file__)
 
-# Get the directory containing the spec file
-spec_dir = os.path.dirname(os.path.abspath(SPECPATH))
+# Get Python DLL directory
+python_dll_path = os.path.join(sys.base_prefix, 'DLLs')
 
 a = Analysis(
     ['ping_tool.py'],
-    pathex=[],
-    binaries=[],  
-    datas=[
-        ('gping_settings.json', '.'),  
-        ('README.md', '.'),  
+    pathex=[python_dll_path],  # Add Python DLL path
+    binaries=[
+        ('tcping.exe', '.'),
+        (os.path.join(sys.base_prefix, 'python311.dll'), '.'),  # Include Python DLL
     ],
+    datas=[
+        ('gping_settings.json', '.'),
+        ('README.md', '.'),
+        ('GPing.ico', '.'),
+    ] + collect_data_files('customtkinter'),
     hiddenimports=[
         'customtkinter',
         'tkinter',
-        'csv',
-        'json',
-        'datetime',
-        'threading',
-        'subprocess',
-        're',
-        'socket',
-        'ctypes',
-        'PIL._tkinter_finder',  
-    ],
+        'PIL._tkinter_finder',
+        '_tkinter',
+        'tkinter.filedialog',
+        'tkinter.messagebox',
+        'tkinter.colorchooser',
+        'tkinter.commondialog',
+        'tkinter.font',
+    ] + collect_submodules('customtkinter'),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['numpy', 'pandas', 'matplotlib'],  
-    noarchive=False,
-    optimize=2,  
+    excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    noarchive=False
 )
 
-# Add customtkinter files
-try:
-    a.datas += Tree(ctk_path, prefix='customtkinter', excludes=['*.pyc'])
-except ImportError:
-    pass
+# Add all DLL files from Python's DLLs directory
+for dll_file in os.listdir(python_dll_path):
+    if dll_file.lower().endswith('.dll'):
+        dll_path = os.path.join(python_dll_path, dll_file)
+        a.binaries.append((dll_file, dll_path, 'BINARY'))
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
@@ -61,13 +65,11 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  
+    console=False,
     disable_windowed_traceback=False,
-    argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='GPing.ico',  
-    version='file_version_info.txt',
-    uac_admin=True,  
+    icon='GPing.ico',
+    uac_admin=True
 )
