@@ -18,6 +18,7 @@ A modern network connectivity monitoring tool with GUI interface.
 - Configurable IP addresses with save functionality
 - Improved CSV log format with clear timestamps and downtime tracking
 - Memory-optimized with buffered logging
+- Minimize to System Tray: Application can be minimized to the system tray for background operation.
 
 ## Recent Updates
 
@@ -35,6 +36,8 @@ A modern network connectivity monitoring tool with GUI interface.
 - Windows OS
 - Administrator rights for network detection
 - tcping.exe (included)
+- pystray
+- Pillow
 
 ## Installation & Setup
 
@@ -53,7 +56,7 @@ If you want to modify or develop the application:
    ```
 4. Run the development version:
    ```powershell
-   uv run python ping_tool.py
+   uv run ping_tool.py
    ```
 
 ### Building from Source
