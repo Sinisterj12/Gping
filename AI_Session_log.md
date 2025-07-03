@@ -103,6 +103,7 @@ uv run pyinstaller ping_tool.py --onefile --noconsole --icon=Gping.ico --name=GP
 - ✅ System tray functionality fully tested and working
 - ✅ v1.0.0 executable ready for GitHub release
 - ✅ All core functionality verified: network monitoring, system tray, minimize/restore
+- ✅ **Tag Cleanup**: Removed obsolete `JTool` tag from local and remote repositories
 
 **Ready for v1.0.0 GitHub Release**: Upload `releases/GPing-v1.0.0.exe` using existing `v1.0.0` tag
 
