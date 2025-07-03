@@ -104,8 +104,10 @@ uv run pyinstaller ping_tool.py --onefile --noconsole --icon=Gping.ico --name=GP
 - ✅ v1.0.0 executable ready for GitHub release
 - ✅ All core functionality verified: network monitoring, system tray, minimize/restore
 - ✅ **Tag Cleanup**: Removed obsolete `JTool` tag from local and remote repositories
+- ✅ **GitHub CLI Setup**: Added GitHub CLI to user PATH and authenticated successfully
+- ✅ **v1.0.0 Release Complete**: GitHub release created with GPing-v1.0.0.exe (15.89 MiB)
 
-**Ready for v1.0.0 GitHub Release**: Upload `releases/GPing-v1.0.0.exe` using existing `v1.0.0` tag
+**🎉 MILESTONE ACHIEVED**: Both v0.9.0-legacy and v1.0.0 releases are now live on GitHub!
 
 ---
 
