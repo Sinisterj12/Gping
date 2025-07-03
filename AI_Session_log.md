@@ -60,3 +60,66 @@ _Started: July 1, 2025_
 - Ready for minimize-to-tray behavior implementation
 
 **Next Priority**: Implement minimize-to-tray functionality (hide window when minimized)
+
+---
+
+## Session I
+### 2025-07-03: Project Organization and Fresh Build with UV
+**Action Taken**: Organized project structure and created fresh executable build using UV
+**Rationale**: Clean up old build artifacts and establish proper release management workflow
+
+**Changes**:
+1. **Version Management Setup**:
+   - Created `v1.0.0` and `v0.9.0-legacy` Git tags
+   - Successfully pushed tags to GitHub repository
+   - Created first GitHub release for v0.9.0-legacy with executable upload
+
+2. **Project Organization**:
+   - Created `releases/` folder for version management
+   - Moved legacy executable to `releases/GPing-v0.9.0-legacy.exe`
+   - Updated `.gitignore` to exclude `releases/` folder from Git tracking
+
+3. **Clean Build Process**:
+   - Removed old `dist/` folder and `GPing.spec` from pre-UV setup
+   - Performed fresh build using `uv run pyinstaller` with proper UV environment
+   - Successfully created `dist/GPing.exe` with system tray functionality
+
+**UV Build Command Used**:
+```powershell
+uv run pyinstaller ping_tool.py --onefile --noconsole --icon=Gping.ico --name=GPing
+```
+
+4. **Testing and Release Preparation**:
+   - Successfully tested new executable with all system tray functionality
+   - Confirmed minimize-to-tray and restore operations working properly
+   - Verified network disconnect/reconnect detection (ethernet unplug test)
+   - Moved working executable to root directory for tcping.exe compatibility
+   - Created `releases/GPing-v1.0.0.exe` for GitHub release upload
+
+**Current Status**:
+- ✅ Professional release folder structure established
+- ✅ Legacy version properly tagged and uploaded to GitHub
+- ✅ Fresh executable built with UV environment management
+- ✅ System tray functionality fully tested and working
+- ✅ v1.0.0 executable ready for GitHub release
+- ✅ All core functionality verified: network monitoring, system tray, minimize/restore
+
+**Ready for v1.0.0 GitHub Release**: Upload `releases/GPing-v1.0.0.exe` using existing `v1.0.0` tag
+
+---
+
+## Known Issues / Future Enhancements
+### Immediate Priority:
+- **Minimize-to-tray behavior**: X button should minimize to tray (not close) when monitoring is active
+- **Settings persistence**: Save user preferences for ping intervals and notification settings
+
+### Future Features:
+- **Configurable ping intervals**: Allow users to set custom ping frequency
+- **Sound alerts**: Audio notifications for connection loss/restore events
+- **Enhanced logging**: Export capabilities and log filtering options
+- **Multiple IP monitoring**: Support for monitoring additional custom IP addresses
+
+### Development Notes:
+- Use GitHub Issues to track individual bugs/features
+- Create feature branches for major changes
+- Test thoroughly before creating new releases

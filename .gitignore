@@ -23,6 +23,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# Releases - keep executables out of git
+releases/
+
 # Virtual Environment
 venv/
 ENV/
