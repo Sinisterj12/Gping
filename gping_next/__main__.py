@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import signal
 from datetime import datetime
+import sys
 
 from .core_runtime import GPingNextAgent
 from .config import load_config
@@ -15,6 +16,9 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="Run the GPING NEXT agent")
     parser.add_argument("--once", action="store_true", help="Run a single probe cycle and exit")
     args = parser.parse_args()
+    if sys.platform.startswith("win"):
+        with contextlib.suppress(AttributeError):
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
     agent = GPingNextAgent(load_config())
     if args.once:
         await agent._gather_and_send(datetime.utcnow(), force_upload=True)  # type: ignore[attr-defined]
@@ -26,7 +30,8 @@ async def main() -> None:
 
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, _handle_stop)
+        with contextlib.suppress(NotImplementedError):
+            loop.add_signal_handler(sig, _handle_stop)
     runner = asyncio.create_task(agent.run_forever())
     await stop_event.wait()
     runner.cancel()

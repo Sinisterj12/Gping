@@ -1,0 +1,16 @@
+{
+  "store_id": "TEST-STORE",
+  "targets": [
+    {"name": "gateway", "host": "192.168.1.1", "port": 443, "use_tls": false},
+    {"name": "isp", "host": "8.8.4.4", "port": 443, "use_tls": false},
+    {"name": "public", "host": "8.8.8.8", "port": 443, "use_tls": false}
+  ],
+  "telemetry": {
+    "sinks": ["local", "apps_script"],
+    "app_script": {
+      "base_url": "https://script.google.com/macros/s/AKfycbyev9ITDQksDX7p2BvbTMX-J6D4Jseq8dyjGwhiz50ugCHl0M2uzd_R_DZNLsNax7gM",
+      "api_key": "demo-key"
+    }
+  }
+}
+
