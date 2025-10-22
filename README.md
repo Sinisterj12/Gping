@@ -1,112 +1,109 @@
-# GPing Tool
+# GPING NEXT
 
-A modern network connectivity monitoring tool with GUI interface.
+GPING NEXT is a lightweight, always-on helper that keeps every register or back-office server aware of its network health and hardware inventory. It was designed for busy grocery teams that need clear answers fast—even when the internet is flaky or the wiring is old.
 
-## Features
+---
 
-- Modern, clean GUI interface using CustomTkinter
-- Real-time connection monitoring for Gateway and Google DNS
-- Selective testing with checkboxes for each IP
-- Clear status indicators:
-  - ● Connected (Green)
-  - ⬤ Disconnected (Red)
-  - ◌ Starting (Orange)
-  - ○ Not Running (Gray)
-- Automatic log cleanup (removes logs older than 7 days)
-- CSV logging with detailed connection events
-- Network type detection (Public/Private)
-- Configurable IP addresses with save functionality
-- Improved CSV log format with clear timestamps and downtime tracking
-- Memory-optimized with buffered logging
-- Minimize to System Tray: Application can be minimized to the system tray for background operation.
+## Why stores like it
+- **Understands the outage**: Concurrent TCP/TLS/HTTP probes (with ARP hints) show whether the break is inside the store or out on the ISP side.
+- **Stays quiet but available**: Runs headless with <20 MB idle RAM. A simple unlock file reveals a calm red/amber/green summary for on-site checks.
+- **Keeps managers in sync**: Hourly health uploads, daily inventory, 15-minute heartbeats, and SENDNOW triggers feed Google Apps Script dashboards or Vigilix.
+- **Survives rough networks**: Delta-only logging, durable offline queues, and watchlist-driven 5-minute bursts make it resilient when links flap.
 
-## Recent Updates
+---
 
-- Simplified UI with single toggle button for Start/Stop
-- Added selective testing with checkboxes for each IP
-- Improved error handling and recovery detection
-- Enhanced status indicators with both icons and text
-- Optimized memory usage with buffered CSV writing
-- Added packet loss tracking and reporting
-- Improved network type detection
-- Enhanced error handling for tcping operations
+## What you need before testing
+1. **Python 3.11 and [uv](https://github.com/astral-sh/uv)** installed on the machine.
+2. Outbound HTTPS access (no inbound ports required).
+3. Optional: PowerShell on Windows for the inventory snapshot and helper scripts (Linux/macOS will fall back gracefully).
 
-## Requirements
+The agent ships with safe defaults. If you need to customise the store ID or probe targets, create a `gping_next_config.json` beside this README:
 
-- Windows OS
-- Administrator rights for network detection
-- tcping.exe (included)
-- pystray
-- Pillow
+```json
+{
+  "store_id": "KS-218",
+  "targets": [
+    {"name": "gateway", "host": "192.168.1.1", "port": 443, "use_tls": false},
+    {"name": "isp", "host": "8.8.4.4", "port": 443, "use_tls": false},
+    {"name": "public", "host": "8.8.8.8", "port": 443, "use_tls": false,
+     "http_path": "/robots.txt", "timeout": 5.0}
+  ]
+}
+```
 
-## Installation & Setup
+If the JSON cannot be parsed, the agent copies it to `config.fixme.json` and continues with defaults so it never blocks monitoring.
 
-### Using the Pre-built Executable (Recommended)
-1. Download or clone this repository
-2. Run `GPing.exe` directly from the project folder
+---
 
-### Development Setup (UV)
-If you want to modify or develop the application:
-
-1. Install [UV](https://docs.astral.sh/uv/) package manager
-2. Clone this repository
-3. Install dependencies:
-   ```powershell
-   uv sync
+## 5-minute smoke test (no coding required)
+1. **Run a single pass**
+   ```bash
+   uv run python -m gping_next --once
    ```
-4. Run the development version:
-   ```powershell
-   uv run ping_tool.py
+   - Creates `data/logs/GPingMMDDYYYY.csv` (with a matching `.jsonl`) containing the latest probe results.
+   - Stores any telemetry uploads under `data/queue/sent/` (LocalFile sink) or queues them offline if an endpoint is unreachable.
+
+2. **Force an upload**
+   - Windows PowerShell: `./scripts/sendnow.ps1`
+   - macOS/Linux: `touch SENDNOW`
+   Run `uv run python -m gping_next --once` again. You should see a fresh entry appended to the JSONL log with the current timestamp.
+
+3. **Unlock the local status view (optional)**
+   - Windows PowerShell: `./scripts/unlock.ps1 -Token demo`
+   - macOS/Linux: `touch UNLOCK_demo`
+   Re-run the agent. Inspect `data/ui/status.json` for:
+   - `locked: false`
+   - `status: green|amber|red`
+   - `last_failure_reason`
+   - Tooltips capped at 12 words (for accessibility)
+
+4. **Inspect the queue (simulated outage)**
+   - Temporarily disconnect the machine or edit the config to point at an unreachable host.
+   - Run `uv run python -m gping_next --once` and confirm a `queued-*.json` file appears under `data/queue/`.
+   - Restore connectivity and run the command again—the file should disappear and the `sent/health.jsonl` should grow by one line.
+
+5. **Run the automated checks**
+   ```bash
+   uv run pytest
    ```
+   Pytest confirms logging cadence, watchlist policy behaviour, trigger handling, UI locks, queue dedupe, telemetry flushing, and more.
 
-### Building from Source
-To create a new executable:
-```powershell
-uv run pyinstaller GPing.spec
+That’s it—the agent is ready for longer trials. When promoted to a service, use `./scripts/install.ps1` (idempotent) to register a startup task on Windows. `./scripts/uninstall.ps1` removes it safely.
+
+---
+
+## How it stays reliable on small-town networks
+- **Bounded concurrency** keeps probes gentle on fragile links.
+- **Error codes with ARP hints** (`l2_present_l3_blocked`, `tcp_timeout`, `tcp_refused`, etc.) point straight at wiring vs. upstream issues.
+- **Watchlist cadence** drops to 5-minute loops until a specified date whenever Google Apps Script returns `"mode": "watch"` for the store.
+- **Refresh-now triggers** are polled every ≤45 seconds so dashboards update within the 60 second SLA.
+- **Heartbeat guarantee** writes a status line every 15 minutes, even when nothing changes.
+- **Seven-day retention** automatically purges aged CSV and JSONL files to avoid manual cleanup.
+
+---
+
+## Repo tour
+```
+gping_next/           # Agent source (runtime, probes, telemetry, triggers, UI bridge)
+dashboard/apps_script # Google Apps Script stubs and README
+scripts/              # PowerShell helpers (install, unlock, sendnow, uninstall)
+docs/                 # Architecture, API contract, UX, constraints, ops, troubleshooting guides
+tests/                # Pytest coverage for logging, policy, queue, UI, telemetry
 ```
 
-## Usage
+Additional documentation:
+- `/docs/ARCH.md` – deep dive into the async design.
+- `/docs/API.md` – Apps Script endpoints with curl samples.
+- `/docs/CONSTRAINTS.md` – operational guardrails.
+- `/docs/OPERATIONS.md` – repo map plus a 10-minute evaluation script.
+- `/docs/TROUBLESHOOT.md` – quick fixes for common field issues.
 
-1. **Run the application:**
-   - Double-click `GPing.exe` OR
-   - Run from command line: `.\GPing.exe`
-2. Enter Gateway IP (auto-detected) or use default: 192.168.1.254
-3. Enter Google DNS or use default: 8.8.8.8
-4. Select which IPs to monitor using the checkboxes
-5. Click "Start Tests" to begin monitoring
-6. View real-time status and connection log
-7. Check network type using the "Check Network Type" button
+---
 
-## Logs
+## Next steps for deployment
+1. Configure your Apps Script endpoint or Vigilix integration (stubs provided under `dashboard/apps_script/`).
+2. Adjust `gping_next_config.json` if you need different probe targets or telemetry sinks.
+3. Schedule the agent with `scripts/install.ps1` on each Windows host (or adapt the same logic for other platforms).
+4. Monitor `data/logs/` and your dashboard during the first day to confirm watchlist cadence, SENDNOW triggers, and heartbeats behave as expected.
 
-The tool creates CSV log files with the following information:
-- Date and Time columns for easy filtering
-- Connection events (UP, LOST, RESTORED)
-- Response times and packet loss statistics
-- Network type information
-- Downtime duration tracking
-
-Logs are automatically cleaned up after 7 days to manage disk space.
-
-## Project Structure
-
-```
-GPing/
-├── GPing.exe          # Main executable (ready to run)
-├── ping_tool.py       # Source code
-├── tcping.exe         # TCP ping utility (required)
-├── pyproject.toml     # UV project configuration
-├── uv.lock           # Locked dependencies
-├── GPing.spec        # PyInstaller build configuration
-├── gping_settings.json # Application settings
-└── logs/             # Log files directory
-```
-
-## Development
-
-This project uses [UV](https://docs.astral.sh/uv/) for dependency management. Key commands:
-
-- `uv sync` - Install/update dependencies
-- `uv add package-name` - Add new dependencies
-- `uv run python ping_tool.py` - Run development version
-- `uv run pyinstaller GPing.spec` - Build executable
+When you’re satisfied, the project is ready for extended testing by your team—no extra coding required.

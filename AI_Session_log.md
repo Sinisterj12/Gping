@@ -126,3 +126,12 @@ uv run pyinstaller ping_tool.py --onefile --noconsole --icon=Gping.ico --name=GP
 - Use GitHub Issues to track individual bugs/features
 - Create feature branches for major changes
 - Test thoroughly before creating new releases
+- Implemented GPING NEXT foundation: created async agent package (`gping_next/`) with runtime, probes, telemetry sinks, policy controls, logging, inventory collection, triggers, intent routing, and local UI bridge modules. Added CLI entrypoint for headless execution.
+- Added documentation suite (`docs/ARCH.md`, `docs/API.md`, `docs/DASHBOARD_UX.md`, `docs/CONSTRAINTS.md`, `docs/OPERATIONS.md`, `docs/TROUBLESHOOT.md`) plus Apps Script stub and PowerShell deployment scripts.
+- Wrote pytest coverage for logging cadence, watchlist policy, trigger handling, queue dedupe, and UI locking; updated README with GPING NEXT usage overview.
+- Simplified task registry noop helper to avoid unnecessary `asyncio` dependency while keeping async signature.
+
+### 2025-07-04: GPING NEXT polish for field testing
+- Rewrote `README.md` with a non-technical quick-start, flaky-network guidance, and deployment checklist so store managers can self-test the agent.
+- Expanded `/docs/TROUBLESHOOT.md` to cover repeated dropouts and how to react using watch mode plus SENDNOW triggers.
+- Added `tests/test_telemetry.py` to prove the offline queue flushes once connectivity returns, protecting uploads after outages.
