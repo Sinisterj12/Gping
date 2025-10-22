@@ -6,7 +6,7 @@ GPING NEXT is a lightweight, always-on helper that keeps every register or back-
 
 ## Why stores like it
 - **Understands the outage**: Concurrent TCP/TLS/HTTP probes (with ARP hints) show whether the break is inside the store or out on the ISP side.
-- **Stays quiet but available**: Runs headless with <20 MB idle RAM. A simple unlock file reveals a calm red/amber/green summary for on-site checks.
+- **Stays quiet but available**: Runs headless with <20 MB idle RAM. A simple unlock file reveals a calm red/amber/green summary for on-site checks.
 - **Keeps managers in sync**: Hourly health uploads, daily inventory, 15-minute heartbeats, and SENDNOW triggers feed Google Apps Script dashboards or Vigilix.
 - **Survives rough networks**: Delta-only logging, durable offline queues, and watchlist-driven 5-minute bursts make it resilient when links flap.
 
@@ -17,7 +17,7 @@ GPING NEXT is a lightweight, always-on helper that keeps every register or back-
 2. Outbound HTTPS access (no inbound ports required).
 3. Optional: PowerShell on Windows for the inventory snapshot and helper scripts (Linux/macOS will fall back gracefully).
 
-The agent ships with safe defaults. If you need to customise the store ID or probe targets, create a `gping_next_config.json` beside this README:
+The agent ships with safe defaults. To run against real targets or telemetry endpoints, edit the `gping_next_config.json` beside this README. Keep the Apps Script base URL **without** `/exec`; the agent appends `/ingest`.
 
 ```json
 {
@@ -32,6 +32,20 @@ The agent ships with safe defaults. If you need to customise the store ID or pro
 ```
 
 If the JSON cannot be parsed, the agent copies it to `config.fixme.json` and continues with defaults so it never blocks monitoring.
+
+---
+
+## Quick automated live test
+Run everything from PowerShell in the repo root:
+
+```powershell
+.\scripts\quick_live_test.ps1
+```
+
+- Ensures dependencies via `uv sync`, runs a baseline probe, forces a SENDNOW upload, unlocks the local status view, and guides you through the unplugged outage drill.
+- Prints the latest JSON entries, queue status, and the unlocked `data/ui/status.json` snapshot.
+- Re-locks the UI and removes helper files when finished.
+- Use `-SkipOutage` if you can’t pull the cable right now, or `-SkipSync` when the environment is already provisioned.
 
 ---
 
@@ -76,9 +90,10 @@ That’s it—the agent is ready for longer trials. When promoted to a service, 
 - **Bounded concurrency** keeps probes gentle on fragile links.
 - **Error codes with ARP hints** (`l2_present_l3_blocked`, `tcp_timeout`, `tcp_refused`, etc.) point straight at wiring vs. upstream issues.
 - **Watchlist cadence** drops to 5-minute loops until a specified date whenever Google Apps Script returns `"mode": "watch"` for the store.
-- **Refresh-now triggers** are polled every ≤45 seconds so dashboards update within the 60 second SLA.
+- **Refresh-now triggers** are polled every 45 seconds so dashboards update within the 60 second SLA.
 - **Heartbeat guarantee** writes a status line every 15 minutes, even when nothing changes.
 - **Seven-day retention** automatically purges aged CSV and JSONL files to avoid manual cleanup.
+- **Trigger files** (`SENDNOW`, `UNLOCK_<token>`) give techs and remote ops instant control without logging into the host.
 
 ---
 
