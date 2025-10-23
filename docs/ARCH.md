@@ -4,15 +4,14 @@
 GPING NEXT is a headless async agent that performs proactive network probes, collects lightweight system inventory, and ships telemetry to multiple sinks. The runtime stays dormant between scheduled cadences to respect the <20 MB RAM / low CPU requirement.
 
 ## Package Layout
-- `gping_next/core_runtime.py` – async orchestrator for probes, telemetry, watchlist cadence, and trigger handling.
-- `gping_next/config.py` – configuration loader with safe defaults and directory provisioning.
-- `gping_next/probes.py` – concurrent TCP/TLS/HTTP probes with ARP awareness for `l2_present_l3_blocked` classification.
-- `gping_next/logger.py` – delta-only CSV + JSON logging and 7-day retention manager.
-- `gping_next/telemetry.py` – pluggable sinks (Local, Apps Script, Vigilix placeholder) with durable queue + idempotency keys.
-- `gping_next/policy.py` – cadence control, watchlist evaluation, refresh polling windows.
-- `gping_next/web_local.py` – locked-by-default UI projection to a local JSON snapshot (no inbound ports).
-- `gping_next/task_api.py` & `gping_next/intent_router.py` – extensible command/task routing scaffolding.
-- `gping_next/inventory.py` – PowerShell CIM-based inventory with fail-soft fallbacks.
+- `rdsiq_core/` - foundation runtime (cadence loop, telemetry sinks, triggers, task/intent registry, UI bridge) plus the CLI entry point (`python -m rdsiq_core`).
+- `gping_next/core_runtime.py` - GPing module built on the foundation (probes, telemetry fan-out, watchlist cadence, trigger handling).
+- `gping_next/config.py` - module configuration loader for targets plus reuse of shared runtime directories.
+- `gping_next/probes.py` - concurrent TCP/TLS/HTTP probes with ARP awareness for `l2_present_l3_blocked` classification.
+- `gping_next/logger.py` - delta-only CSV + JSON logging and 7-day retention manager.
+- `gping_next/telemetry.py` - module-specific serializers layered on the shared sinks.
+- `gping_next/policy.py` - cadence control, watchlist evaluation, refresh polling windows.
+- `gping_next/inventory.py` - PowerShell CIM-based inventory with fail-soft fallbacks.
 
 ## Data Flow
 1. **Probes**: `ProbeRunner` issues bounded-concurrency TCP connects, optional TLS handshake inspection, and optional HTTP HEAD requests.

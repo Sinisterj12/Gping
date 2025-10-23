@@ -1,58 +1,15 @@
-"""Local UI projection without opening inbound ports."""
+"""Compatibility layer exposing the shared LocalUIBridge with GPing defaults."""
 from __future__ import annotations
 
-import json
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, Optional
+from rdsiq_core.config import UI_DIR as CORE_UI_DIR
+from rdsiq_core.ui import LocalUIBridge as CoreLocalUIBridge
 
-from .config import UI_DIR
+UI_DIR = CORE_UI_DIR
 
 
-class LocalUIBridge:
+class LocalUIBridge(CoreLocalUIBridge):
     def __init__(self) -> None:
-        self._token: Optional[str] = None
-        self._path = UI_DIR / "status.json"
-        self.lock()
-
-    def lock(self) -> None:
-        self._token = None
-        self._write({"locked": True})
-
-    def unlock(self, token: str) -> None:
-        self._token = token
-
-    def is_unlocked(self) -> bool:
-        return self._token is not None
-
-    def publish(
-        self,
-        status_color: str,
-        last_failure: Optional[str],
-        last_upload: Optional[datetime],
-        summary: Dict[str, str],
-    ) -> None:
-        if not self._token:
-            self.lock()
-            return
-        payload = {
-            "locked": False,
-            "token": self._token,
-            "status": status_color,
-            "last_failure_reason": last_failure or "None recorded",
-            "last_upload": last_upload.isoformat() if last_upload else None,
-            "summary": summary,
-            "tooltips": {
-                "status": "Green steady means all clear",
-                "send": "Uploads status to dashboard now",
-                "check": "Runs current probes without delay",
-            },
-        }
-        self._write(payload)
-
-    def _write(self, payload: Dict[str, object]) -> None:
-        UI_DIR.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(json.dumps(payload, indent=2))
+        super().__init__(UI_DIR)
 
 
-__all__ = ["LocalUIBridge"]
+__all__ = ["LocalUIBridge", "UI_DIR"]

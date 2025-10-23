@@ -5,53 +5,48 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
 
+from rdsiq_core.runtime import RDSIQCoreAgent
+from rdsiq_core.schemas import TriggerState
+
 from .config import AgentConfig, load_config
-from .intent_router import Intent, IntentRouter
+from .intent_router import Intent
 from .inventory import gather_inventory
 from .logger import DeltaLogger
 from .policy import CadencePolicy
 from .probes import ProbeRunner
 from .schemas import HealthPayload, TargetStatus
-from .task_api import TaskMetadata, TaskRegistry
+from .task_api import TaskMetadata
 from .telemetry import AppsScriptSink, TelemetryManager
-from .triggers import read_triggers
 from .web_local import LocalUIBridge
 
 
-class GPingNextAgent:
+class GPingNextAgent(RDSIQCoreAgent):
     def __init__(self, config: Optional[AgentConfig] = None) -> None:
         self.config = config or load_config()
         self.prober = ProbeRunner()
         self.logger = DeltaLogger(self.config.store_id, self.config.cadence.heartbeat)
-        self.telemetry = TelemetryManager(self.config.telemetry)
         self.policy = CadencePolicy(self.config.cadence, self.config.store_id)
-        self.ui = LocalUIBridge()
-        self.tasks = TaskRegistry()
-        self.intent_router = IntentRouter()
-        self.last_failure: Optional[str] = None
-        self.last_upload: Optional[datetime] = None
-        self._register_default_tasks()
         self._inventory_sent: Optional[datetime] = None
+        super().__init__(self.config.cadence, self.config.telemetry, TelemetryManager)
+        self.ui = LocalUIBridge()
+        self._register_default_tasks()
 
-    async def run_forever(self) -> None:
+    async def on_startup(self) -> None:
         await self._send_inventory_once()
-        while True:
+
+    async def run_cycle(self, now: datetime, triggers: TriggerState) -> None:
+        if await self._maybe_refresh(now):
             now = datetime.utcnow()
-            triggers = read_triggers()
-            if triggers.unlocked_token:
-                self.ui.unlock(triggers.unlocked_token)
-            elif not self.ui.is_unlocked():
-                self.ui.lock()
-            if triggers.send_now:
-                await self._gather_and_send(now, force_upload=True)
-            if await self._maybe_refresh(now):
-                now = datetime.utcnow()
-            if self.policy.should_poll_watchlist(now):
-                await self._update_watchlist(now)
-            interval = self.policy.cadence_for(now)
-            await self._gather_and_send(now)
-            self.policy.clear_expired(datetime.utcnow())
-            await asyncio.sleep(interval)
+        if self.policy.should_poll_watchlist(now):
+            await self._update_watchlist(now)
+        await self._gather_and_send(now)
+        self.policy.clear_expired(datetime.utcnow())
+
+    async def on_send_now(self) -> None:
+        await self._gather_and_send(datetime.utcnow(), force_upload=True)
+
+    async def next_interval(self, now: datetime, _triggers: TriggerState) -> float:
+        return self.policy.cadence_for(datetime.utcnow())
 
     async def _gather_and_send(self, now: datetime, force_upload: bool = False) -> None:
         statuses = await self.prober.probe_all(self.config.targets)
@@ -109,7 +104,7 @@ class GPingNextAgent:
         self.ui.publish(color, self.last_failure, self.last_upload, summary)
 
     def _register_default_tasks(self) -> None:
-        self.tasks.register(
+        self.register_task(
             "check_internet",
             TaskMetadata(
                 name="check_internet",
@@ -118,7 +113,7 @@ class GPingNextAgent:
                 action=lambda: self._schedule_immediate_probe(),
             ),
         )
-        self.tasks.register(
+        self.register_task(
             "send_status",
             TaskMetadata(
                 name="send_status",
@@ -127,7 +122,7 @@ class GPingNextAgent:
                 action=lambda: self._schedule_immediate_upload(),
             ),
         )
-        self.intent_router.register(
+        self.register_intent(
             "check internet",
             Intent(name="check_internet", handler=lambda: None, description="Probe connectivity"),
         )

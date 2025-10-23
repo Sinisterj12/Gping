@@ -4,38 +4,24 @@ from __future__ import annotations
 import json
 import socket
 from dataclasses import dataclass, field
-from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from rdsiq_core.config import (
+    AppScriptConfig,
+    Cadence,
+    TelemetryConfig,
+    DATA_DIR,
+    LOG_DIR,
+    QUEUE_DIR,
+    UI_DIR,
+    ensure_runtime_dirs,
+)
 
 from .schemas import TargetSpec
 
 CONFIG_FILE = Path("gping_next_config.json")
 FIXME_FILE = Path("config.fixme.json")
-DATA_DIR = Path("data")
-LOG_DIR = DATA_DIR / "logs"
-QUEUE_DIR = DATA_DIR / "queue"
-UI_DIR = DATA_DIR / "ui"
-
-
-@dataclass(slots=True)
-class Cadence:
-    normal: timedelta = timedelta(hours=1)
-    watch: timedelta = timedelta(minutes=5)
-    heartbeat: timedelta = timedelta(minutes=15)
-    refresh_poll: timedelta = timedelta(seconds=45)
-
-
-@dataclass(slots=True)
-class AppScriptConfig:
-    base_url: str = "https://script.google.com/macros/s/app-id"
-    api_key: str = "demo-key"
-
-
-@dataclass(slots=True)
-class TelemetryConfig:
-    sinks: List[str] = field(default_factory=lambda: ["local", "apps_script", "vigilix"])
-    app_script: AppScriptConfig = field(default_factory=AppScriptConfig)
 
 
 @dataclass(slots=True)
@@ -93,10 +79,7 @@ def load_config() -> AgentConfig:
         parsed_targets = [t for t in parsed_targets if t is not None]
         if parsed_targets:
             targets = parsed_targets
-    DATA_DIR.mkdir(exist_ok=True)
-    LOG_DIR.mkdir(exist_ok=True)
-    QUEUE_DIR.mkdir(exist_ok=True)
-    UI_DIR.mkdir(exist_ok=True)
+    ensure_runtime_dirs()
     return AgentConfig(store_id=store_id, targets=targets)
 
 

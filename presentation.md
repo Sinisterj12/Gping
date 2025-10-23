@@ -1,28 +1,29 @@
-# GPING NEXT – Presentation Guide
+# RDSIQ Ops Platform – Presentation Guide
 
 ## What It Is
-- Headless Python agent that watches gateway/ISP/public targets and logs every probe.
-- Ships telemetry to Google Apps Script (demo) or Vigilix when configured, so you have remote visibility even if the store is offline.
-- Local CSV/JSONL archives under `data/` for on-site audits; PowerShell script automates smoke and outage drills.
+- **RDSIQ Foundation:** Headless base agent that remote teams trigger from the office. It owns the cadence loop, trigger files, telemetry pipeline, task registry, and local status bridge so modules hot-swap without touching infrastructure.
+- **GPING NEXT Module:** Default plug-in that probes gateway/ISP/public targets, captures inventory, and streams health deltas back to the dashboard without opening NetSupport or RDP.
+- **Why it matters:** Remote technicians stay in their chairs—no file transfers, no manual script babysitting—yet they still see live store conditions and queue fixes instantly.
 
-## User Flow
-- Techs or automation drop trigger files (`SENDNOW`, `UNLOCK_<token>`) to force uploads or expose the local status snapshot.
-- The agent runs continuously via `uv run python -m gping_next` or the Windows scheduled task (`scripts/install.ps1`).
-- Loss of connectivity queues telemetry locally; once the WAN returns, the queue flushes automatically.
-- Remote teams open the Google Sheet (Apps Script) to see incoming payloads in near real time; dashboards or Vigilix can consume the same feed.
+## Operator Flow (Desk Perspective)
+1. Log into the internal dashboard (Vigilix/Sheets today, future web UI).
+2. Pick a store; choose a task (e.g., “Connectivity Pulse” or “Cleanup Driver Cache”) registered with the foundation.
+3. RDSIQ executes the module locally, logs to `data/logs/`, queues telemetry under `data/queue/`, and mirrors R/A/G state to `data/ui/status.json`.
+4. Results and recommendations show up on the dashboard within seconds—no remote desktop session required.
 
 ## Tools & Interfaces
-- **Local:** PowerShell helper `scripts/quick_live_test.ps1` for smoke/outage demos; `data/ui/status.json` shows R/A/G state when unlocked.
-- **Remote:** Google Apps Script backing a Sheet tab (`health`) captures uploads today; production can swap in Vigilix or a web dashboard.
-- **Config:** `gping_next_config.json` defines store id, targets, and telemetry endpoints. Defaults are safe placeholders.
+- **Foundation CLI:** `uv run python -m rdsiq_core` (service loop) or `--once` for spot checks; modules declared in `rdsiq_config.json`.
+- **Module Examples:** `gping_next` (network health & inventory), future cleaners, package installers, or script runners that register via `register(agent)`.
+- **Automation Script:** `scripts/quick_live_test.ps1` drives full smoke/outage drills end-to-end for demo or QA.
+- **Telemetry:** Google Apps Script stub today; Vigilix placeholder sink already wired; swap in other sinks by extending `rdsiq_core.telemetry`.
 
 ## Talking Points
-- Designed for grocery lanes with flaky networks: resilient queueing, short burst watchlist mode, forced SENDNOW telemetry for 60-second SLAs.
-- Headless by default, so it survives restarts and runs unattended; GUI can be layered later if techs need live charts.
-- Logs are structured (JSONL) so you can pipe into Data Studio or Vigilix without new ETL work.
-- PowerShell installers allow RMM rollout; uninstall script leaves no residue.
+- Built for remote ops teams, not on-site techs—eliminates repetitive NetSupport sessions and manual .ps1 transfers.
+- Modular by design: once the foundation is live, new tools are just another Python module hooking the shared task registry.
+- Resilient in rough networks thanks to delta logging, durable queue, SENDNOW triggers, and watchlist cadence control.
+- Uses placeholders only (`KS-218`, demo keys); no production secrets in the repo.
 
 ## What’s Next
-- Plug in real Apps Script URL/API key or Vigilix credentials.
-- Optionally build a lightweight web dashboard (Data Studio/Looker or custom) on top of the same telemetry feed.
-- Add store-specific targets in `gping_next_config.json` before field trials.
+1. Publish real Apps Script or Vigilix credentials to the secure config channel and update `rdsiq_config.json`.
+2. Finish the dashboard card that calls foundation tasks (start with GPing actions).
+3. Prioritise the next module (e.g., Drive Cleanup, Log Collection, Package Push) and register it through the same interface.

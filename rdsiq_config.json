@@ -1,0 +1,20 @@
+{
+  "store_id": "KS-218",
+  "modules": [],
+  "telemetry": {
+    "sinks": ["local", "apps_script", "vigilix"],
+    "app_script": {
+      "base_url": "https://script.google.com/macros/s/app-id",
+      "api_key": "demo-key"
+    }
+  },
+  "cadence": {
+    "normal": {"seconds": 900},
+    "watch": {"seconds": 300},
+    "heartbeat": {"seconds": 900},
+    "refresh_poll": {"seconds": 45}
+  },
+  "metadata": {
+    "notes": "Edit modules[] with dotted paths to module register() helpers."
+  }
+}
